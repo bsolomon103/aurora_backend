@@ -1,3 +1,5 @@
-**/__pycache__/
+aurora/__pycache__
+aurora_api/__pycache__
+aurora_api/migrations/__pycache__
 venv
 
