@@ -129,7 +129,7 @@ class ModelTrainingObject:
         file_name = f"master_model_cache.pth"
         directory = os.path.join(settings.BASE_DIR, "files")
         FILE =  f"{directory}/{file_name}"
-        torch.save({f"{self.customer_name}": data}, FILE)
+        torch.save(data, FILE)
         return self.intents, FILE
 
 
