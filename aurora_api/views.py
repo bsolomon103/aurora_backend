@@ -9,13 +9,13 @@ from .prediction_model import NeuralNet
 from .models import Models, Customer
 import random, string 
 import torch
-from .extract import ModelIngredients, get_response
+from .extract import ModelIngredients, get_response, model_builder, tmp_func
 from .nltk_utils import tokenize, bag_of_words
 from .serializers import MsgSerializer, GetClientSerializer
 from django.urls import reverse_lazy
 import os
 from django.conf import settings
-from aurora_api.frmdskext import get_ingredients_
+from .task_utils import PerformTask
 from rest_framework.views import APIView
 from asgiref.sync import sync_to_async
 import time
@@ -24,6 +24,9 @@ from django.utils.decorators import method_decorator
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import SessionAuthentication
 from rest_framework import permissions
+import json 
+import datefinder
+import pickle
 
 
 
@@ -53,7 +56,7 @@ class ModelTrainingView(View):
             batch_size = form.cleaned_data['batch_size']
             learning_rate = form.cleaned_data['learning_rate']
             hidden_size = form.cleaned_data['hidden_size']
-
+          
             try:
                 customer_obj= Customer.objects.get(name__icontains=customer_name)
                 cust_id = customer_obj.id
@@ -64,93 +67,137 @@ class ModelTrainingView(View):
                 if len(existing_models) > 0:
                     for i in range(len(existing_models)):
                         existing_model = existing_models[i]
-                        existing_model.delete()
-
-                Models.objects.create(customer_name = customer_obj,
+                        existing_model.intent = intents_json
+                        existing_model.training_file = FILE
+                        existing_model.model_key = model_key
+                        print('Model updated successfully !')
+                        #existing_model.delete()
+                else:
+                    Models.objects.create(customer_name = customer_obj,
                                         intent = intents_json,
                                         training_file = FILE,
                                         model_key = model_key
                                     )
-                print('Model created successfully !')
+                    print('Model created successfully !')
                
                 return render(request, self.template, context=ctx)
             except Exception as e:
                 print(e)
                 return render(request, self.template, context=ctx)
-
         else:
             print('Invalid Form')
             return render(request, self.template, context=ctx)
      
 class ModelResponseAPI(APIView):
     '''Main API which user requests will hit and returns a response to their questions'''
-    
+    keys = ['file','intents','token']
     serializer_class = MsgSerializer
+
     def post(self, request, *args, **kwargs): 
         # Map all requests from host to relevant model
-        # Add host_name to model class and add it as paramerter into Extractor
-      
-        if request.session.get('session_key') is None:
-            request.session.create()
-            print(request.session.session_key)
-        _ingredients = ModelIngredients(1).build()  
-        #_ingredients = get_ingredients_('x')
-        model = _ingredients['model']
-        device = _ingredients['device']
-        intents = _ingredients['intents']
-        all_words = _ingredients['all_words']
-        tags = _ingredients['tags']
-            
-        
-        serializer = self.serializer_class(data=request.data)
-            
+        # Add host_name to model class and add it as paramerter into Extractor   
+        print(request.META['HTTP_ORIGIN'])  
+        serializer = self.serializer_class(data=request.data) 
         if serializer.is_valid():
-            msg = serializer.data['msg']
-            # route process requests here if msg - yes
-            # clear process here if aborted or finished
-            # Only ever 1 process at a time per request.
-            try: 
-                output = get_response(msg, model, all_words, tags, intents, device)
-                if output['process'] is None:
-                    response = output['response']
-                else:
-                    response = output['response']
-                    process = output['process']
-                     
-                status_code = 200
-                  
-                response = Response(response, status=status_code)
-                response.set_cookie('my_cookie','my_value')
-              
-                return response
-            
-            except Exception as e:
-                    print(e)
-                    print('Error')
+            msg  = serializer.data['msg']
+
+        if request.session.session_key is None: 
+            print('Session(no)')
+            request.session.create()
+            print(f'New Session Created: {request.session.session_key}')
+            seasoning = ModelIngredients(1).extract_data()
+
+            # load 'file' and 'intent' into session
+            for k in self.keys:
+                request.session[k] = seasoning[k]
+            request.session['process'] = None  
+            request.session['questionasked'] = None 
+            request.session['answers'] = {}
+            request.session['count'] = 0  
+
         else:
-            response = 'Error Bro'
-            status_code = 500
-       
+            print('Session(yes)')
+            tmp_func(request.session)
+            #check for an active process here
+            if (request.session['process'] != None and msg.lower() == 'quit'):
+                request.session['process'] = None
+                return Response('Process Terminated', status=200)
 
-        return Response(response, status = status_code)
+            elif (request.session['questionasked'] == None and request.session['process'] != None and msg.lower() == 'yes'):
+                #start process
+                process = request.session['process']
+                intents = request.session['intents']
+                for i in intents['intents']:
+                    if i['tag'] == process + ' questions':
+                        questions = i['patterns']
+                    if i['tag'] == 'calender':
+                        request.session['calendar_provider'], request.session['calendar_id'] = i['responses'][0].split(':')[0].strip(), i['responses'][0].split(':')[1].strip()
+                request.session['questions'] = questions
+                count = request.session['count']
+                questionasked, task = request.session['questions'][count].split(':')[0], request.session['questions'][count].split(':')[1]
+                request.session['questionasked'] = questionasked
+                request.session['task'] = task
+                request.session['answers'][questionasked] = ''
+                request.session['count'] += 1
+                return Response(questionasked, status=200)
 
-
-@method_decorator(csrf_exempt, name='dispatch')
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class GetCSRFTokenView(GenericAPIView):
-    permission_classes = (permissions.AllowAny, )
-    def get(self, request, format=None):
-        return Response({'success':'CSRF Cookie set'})
-'''
-class GetCSRFTokenView(GenericAPIView):  
-    permission_classes = (permissions.AllowAny, )
-    serializer_class = GetClientSerializer
-    def post(self, request, format=None):
-        session = request.session.get('session_key')
-        print(session)
-
-
-
-        return Response({'success':'CSRF Cookie set'})
-'''
-
+            elif (request.session['questionasked'] == None and request.session['process']  != None and msg.lower() == 'no'):
+                #kill process
+                request.session['process'] = None
+                request.session['count'] = 0
+                del request.session['intents']
+                return Response('Process Terminated', status=200)
+            
+            elif (request.session['questionasked'] != None and request.session['process'] != None):
+                #continue the process
+                count = request.session['count']
+                if count < len(request.session['questions']):
+                    questionasked = request.session['questionasked']             
+                    output = PerformTask(msg, 
+                                      request.session['task'], 
+                                      request.session['token'],
+                                      request.session['calendar_provider'],
+                                      request.session['calendar_id']).do_task()
+                    if output != None:
+                        request.session['event_times'] = output
+                    request.session['answers'][questionasked] = msg
+                    questionasked, task = request.session['questions'][count].split(':')[0], request.session['questions'][count].split(':')[1]
+                    request.session['questionasked'], request.session['task'] = questionasked, task
+                    request.session['count'] += 1
+                    return Response(questionasked, status=200)
+                
+                else:
+                    questionasked = request.session['questionasked']
+                    request.session['answers'][questionasked] = msg
+                    if request.session['event_times']:
+                        event = PerformTask(msg, 
+                                      request.session['task'], 
+                                      request.session['token'],
+                                      request.session['calendar_provider'],
+                                      request.session['calendar_id']).create_event(request.session['event_times']['start'],
+                                                                                   request.session['event_times']['end'],
+                                                                                   request.session['process'],
+                                                                                   description=request.session['answers'])                 
+                    request.session['questionasked'] = None
+                    request.session['process'] = None
+                    request.session['count'] = 0
+                    return Response(event, status=200)
+        payload = model_builder(request.session['file'])   
+        try: 
+            response = get_response(msg,
+                                    payload['model'], 
+                                    payload['all_words'], 
+                                    payload['tags'],
+                                    request.session['intents'],
+                                    torch.device('cpu')
+                                    )
+            status_code = 200 
+            if response['process'] is None:
+                return Response(response['response'], status=status_code)
+            else:
+                request.session['process'] = response['process']
+                return Response(response['response'], status=status_code)           
+        except:
+            pass
+        response = 'Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.'
+        return Response(response, status=200)

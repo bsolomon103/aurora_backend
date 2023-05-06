@@ -363,6 +363,36 @@
           "I am a carer and I need help."
         ],
         "responses" : ["We offer a variety of programmes for carers within Southend primarily thorugh <b><a href='https://www.carersfirst.org.uk/' target='_blank'>Carers First</a></b> and directly as a local authority. Our services include <b><a href='https://www.southend.gov.uk/help-advice-carers/breaks-carers/1' target='_blank'>Breaks for Carers</a></b> as many carers will need a break from caring from time to time, there are lots of different options to be explored. <b><a href='https://www.southend.gov.uk/help-advice-carers/events-information-discounts/1' target='_blank'>Events, Information and Discounts</a></b> with a range of benefits from establishments across Southend. <b><a href='https://www.southend.gov.uk/help-advice-carers/employment-education-carers/1' target='_blank'>Employment and Education</a></b> to help carers manage money and access a range of benefits and a dedicated team to support <b><a href='https://www.southend.gov.uk/help-advice-carers/young-carers-1/1' target='_blank'>Young Carers</a></b>"]        
+        },
+        {"tag":"child registration process",
+        "patterns": [
+          "What is the process of registering my child?",
+          "What are the steps for registering my new born?",
+          "Can you walk me through the process of booking a child registration appointment?",
+          "What do I need to do to schedule an appointment to register a new born?",
+          "What is the procedure for booking an appointment to register the birth of my child?",
+          "What is the best way to schedule an appointment to register the birth of my baby?"
+        ],
+        "responses" : ["If you would like to register a new born, I can complete the booking for you. Type Yes (to confirm) or No  (if i'm wrong)."]        
+        },
+        {"tag": "child registration process questions",
+        "patterns": ["What day & time would you like to schedule an appointment for and I will check availability for you. : check availability",
+                      "What's your full name as it appears on official documents ? : None",
+                      "What's your relationship to the child being registered ? : None",
+                      "What's the child's full name ? (We'll double chekc this on the day). : None",
+                      "What's the child's date of birth ? (We'll double check this on the day).: None",
+                      "What's the child's gender ? : None",
+                      "Where was the child born ?: None",
+                      "Provide the full name of the child's parents/Legal guardians : None"
+                    ] 
+
+        },
+        {"tag": "calender",
+        "patterns": [],
+        "responses": ["Google : biokporsolomon@southend.gov.uk"]
+
         }
+
+
       ]
 }

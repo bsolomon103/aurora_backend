@@ -12,18 +12,5 @@ class Models(models.Model):
     intent = models.JSONField(null=False)
     training_file = models.FilePathField(path = os.path.join(settings.BASE_DIR,'files'), null=True, unique=True)
     model_key = models.CharField(max_length=200, unique=True, null=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    credentials = models.FileField(upload_to=os.path.join(settings.BASE_DIR,'files'), null=True, max_length=200)
+    tokens = models.FileField(upload_to=os.path.join(settings.BASE_DIR,'files'), null=True, max_length=200)

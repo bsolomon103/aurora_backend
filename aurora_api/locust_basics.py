@@ -1,6 +1,6 @@
 # Locust UI is actually at localhost:8089
-from locust import User, HttpUser, TaskSet, task, constant
-import json, random
+from locust import User, HttpUser, TaskSet, task, constant, between
+import json, random, time
 
 
 class UserTasks(TaskSet):
@@ -19,8 +19,9 @@ class UserTasks(TaskSet):
                               headers=headers,
                               data=json.dumps(payload), 
                               catch_response=True) as response:
-            print(payload['msg'])
-            print(response.text)
+            if response is None:
+                print(True)
+         
     
 
     
@@ -38,7 +39,7 @@ class UserTasks(TaskSet):
 
 class BasicUser(HttpUser):
     host = "http://127.0.0.1:8080/api/response"
-    wait_time = constant(2)
+    wait_time = between(4,8)
     tasks = [UserTasks]
 
     def on_start(self):
