@@ -30,7 +30,7 @@ class ModelIngredients:
       
     def extract_data(self):
         file, intents,token = self.pull_files()
-        self.dc['file'] = file
+        self.dc['file'] = str(file)
         self.dc['intents'] = intents
         self.dc['token'] = str(token)
         return self.dc

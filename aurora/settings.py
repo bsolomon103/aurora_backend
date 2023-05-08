@@ -28,7 +28,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-CORS_ORIGIN_ALLOW_ALL = True
 
 
 INSTALLED_APPS = [
@@ -43,16 +42,15 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap4',
     'corsheaders',
-    "sslserver",
 
 ]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 MIDDLEWARE = [
-     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -60,6 +58,14 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
    
 ]
+
+#SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
+#CORS_ALLOW_ALL_ORIGINS = True # If this is used then `CORS_ALLOWED_ORIGINS` will not have any effect
+
+
+CORS_ALLOWED_ORIGINS = ['https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com']
+
+CSRF_TRUSTED_ORIGINS = ['https://72799206a863436d8bad2219103796ec.vfs.cloud9.eu-west-2.amazonaws.com']
 
 ROOT_URLCONF = 'aurora.urls'
 
@@ -130,7 +136,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = 'static/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'files/')
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
 #MEDIA_ROOT = os.path.join(BASE_DIR, 'files/')
 #MEDIA_URL = '/media/'
@@ -140,9 +146,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'files/')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
-#CORS_ORIGIN_ALLOW_ALL = True # If this is used then `CORS_ALLOWED_ORIGINS` will not have any effect
-CORS_ALLOW_CREDENTIALS = True
+
 
 #SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
 SESSION_COOKIE_NAME = 'sessionid'

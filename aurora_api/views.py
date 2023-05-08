@@ -30,6 +30,7 @@ import pickle
 
 
 
+
 # Create your views here.
 class TestAPIView(GenericAPIView):
     def get(self, request):
@@ -117,7 +118,8 @@ class ModelResponseAPI(APIView):
 
         else:
             print('Session(yes)')
-            tmp_func(request.session)
+            print(request.session.session_key)
+            #tmp_func(request.session)
             #check for an active process here
             if (request.session['process'] != None and msg.lower() == 'quit'):
                 request.session['process'] = None
@@ -182,7 +184,7 @@ class ModelResponseAPI(APIView):
                     request.session['process'] = None
                     request.session['count'] = 0
                     return Response(event, status=200)
-        payload = model_builder(request.session['file'])   
+        payload = model_builder(os.path.join(settings.MEDIA_ROOT, request.session['file']))  
         try: 
             response = get_response(msg,
                                     payload['model'], 
