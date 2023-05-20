@@ -15,6 +15,7 @@ import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 import datetime
+from corsheaders.defaults import default_headers
 
 
 # Quick-start development settings - unsuitable for production
@@ -26,9 +27,11 @@ SECRET_KEY = 'django-insecure-6mia@9h-qqg9qffvvz)i(@%h8o9t6ug2@biz(j49c2j%#@+(as
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['cd640da2747e45bdb08d9f115ec0fcda.vfs.cloud9.eu-west-2.amazonaws.com','*']
 
-
+INTERAL_IPS = [
+    '35.177.18.172',
+    ]
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -41,16 +44,20 @@ INSTALLED_APPS = [
     'rest_framework',
     'crispy_forms',
     'crispy_bootstrap4',
+    
     'corsheaders',
+    'sslserver',
+
 
 ]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 MIDDLEWARE = [
+    "aurora_api.cors.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -59,13 +66,6 @@ MIDDLEWARE = [
    
 ]
 
-#SECURE_REFERRER_POLICY = "no-referrer-when-downgrade"
-#CORS_ALLOW_ALL_ORIGINS = True # If this is used then `CORS_ALLOWED_ORIGINS` will not have any effect
-
-
-CORS_ALLOWED_ORIGINS = ['https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com']
-
-CSRF_TRUSTED_ORIGINS = ['https://72799206a863436d8bad2219103796ec.vfs.cloud9.eu-west-2.amazonaws.com']
 
 ROOT_URLCONF = 'aurora.urls'
 
@@ -135,11 +135,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
-STATIC_URL = 'static/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 
-#MEDIA_ROOT = os.path.join(BASE_DIR, 'files/')
-#MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = 'static/'
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
@@ -152,8 +154,52 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
-SESSION_COOKIE_SAMESITE = None
+SESSION_COOKIE_AGE = 3600
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_COOKIE_SAMESITE = 'None'
+
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_TRUSTED_ORIGINS = ['https://eac946ea7313489f9f0055b8035f47bb.vfs.cloud9.eu-west-2.amazonaws.com', 'http://13.42.50.106']
 
 
+# Optionally, you can add other CORS settings, such as:
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_ALLOWED_ORIGINS = [
+    'http://18.132.209.182:8080',
+]
+
+
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://:Aurora24@172.31.40.69:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
 
 

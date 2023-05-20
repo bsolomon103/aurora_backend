@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.http import HttpResponse
 from rest_framework import generics, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
@@ -9,7 +10,8 @@ from .prediction_model import NeuralNet
 from .models import Models, Customer
 import random, string 
 import torch
-from .extract import ModelIngredients, get_response, model_builder, tmp_func
+from .extract import ModelIngredients, get_response, model_builder
+from .sessionsmanager import SessionManager
 from .nltk_utils import tokenize, bag_of_words
 from .serializers import MsgSerializer, GetClientSerializer
 from django.urls import reverse_lazy
@@ -34,7 +36,16 @@ import pickle
 # Create your views here.
 class TestAPIView(GenericAPIView):
     def get(self, request):
-        return Response({"message: Start building here"})
+        if "counter" in request.session and "counter" == 5:
+            return 
+            request.session["counter"] += 1
+        else:
+            request.session["counter"] = 1
+        return HttpResponse(f"Counter: {request.session['counter']}")
+    
+
+
+        #return Response({"message: Start building here"})
     
 
 class ModelTrainingView(View):
@@ -80,7 +91,6 @@ class ModelTrainingView(View):
                                         model_key = model_key
                                     )
                     print('Model created successfully !')
-               
                 return render(request, self.template, context=ctx)
             except Exception as e:
                 print(e)
@@ -91,115 +101,72 @@ class ModelTrainingView(View):
      
 class ModelResponseAPI(APIView):
     '''Main API which user requests will hit and returns a response to their questions'''
-    keys = ['file','intents','token']
+ 
     serializer_class = MsgSerializer
 
     def post(self, request, *args, **kwargs): 
-        # Map all requests from host to relevant model
-        # Add host_name to model class and add it as paramerter into Extractor   
-        print(request.META['HTTP_ORIGIN'])  
+        #origin = request.META['HTTP_ORIGIN']
+        #origin = "doesn't matter yet"
+        origin = 'https://cd640da2747e45bdb08d9f115ec0fcda.vfs.cloud9.eu-west-2.amazonaws.com'
         serializer = self.serializer_class(data=request.data) 
+        
         if serializer.is_valid():
             msg  = serializer.data['msg']
-
-        if request.session.session_key is None: 
-            print('Session(no)')
-            request.session.create()
-            print(f'New Session Created: {request.session.session_key}')
-            seasoning = ModelIngredients(1).extract_data()
-
-            # load 'file' and 'intent' into session
-            for k in self.keys:
-                request.session[k] = seasoning[k]
-            request.session['process'] = None  
-            request.session['questionasked'] = None 
-            request.session['answers'] = {}
-            request.session['count'] = 0  
-
+        if request.session.session_key is None:
+            request.session = SessionManager(request.session, origin, msg).create_session()
+            print('[*] A session has been created [*]')
         else:
-            print('Session(yes)')
-            print(request.session.session_key)
-            #tmp_func(request.session)
-            #check for an active process here
-            if (request.session['process'] != None and msg.lower() == 'quit'):
-                request.session['process'] = None
+            #print('[*] A session exists [*]')
+            if (msg.lower() == 'quit'):
+                request.session = SessionManager(request.session, origin, msg).terminate_process()
                 return Response('Process Terminated', status=200)
-
             elif (request.session['questionasked'] == None and request.session['process'] != None and msg.lower() == 'yes'):
                 #start process
-                process = request.session['process']
-                intents = request.session['intents']
-                for i in intents['intents']:
-                    if i['tag'] == process + ' questions':
-                        questions = i['patterns']
-                    if i['tag'] == 'calender':
-                        request.session['calendar_provider'], request.session['calendar_id'] = i['responses'][0].split(':')[0].strip(), i['responses'][0].split(':')[1].strip()
-                request.session['questions'] = questions
-                count = request.session['count']
-                questionasked, task = request.session['questions'][count].split(':')[0], request.session['questions'][count].split(':')[1]
-                request.session['questionasked'] = questionasked
-                request.session['task'] = task
-                request.session['answers'][questionasked] = ''
-                request.session['count'] += 1
-                return Response(questionasked, status=200)
-
+                request.session = SessionManager(request.session, origin, msg).start_process()
+                return Response(request.session['questionasked'], status=200)
             elif (request.session['questionasked'] == None and request.session['process']  != None and msg.lower() == 'no'):
                 #kill process
-                request.session['process'] = None
-                request.session['count'] = 0
-                del request.session['intents']
+                request.session = SessionManager(request.session, origin, msg).kill_process()
                 return Response('Process Terminated', status=200)
-            
             elif (request.session['questionasked'] != None and request.session['process'] != None):
-                #continue the process
                 count = request.session['count']
                 if count < len(request.session['questions']):
-                    questionasked = request.session['questionasked']             
-                    output = PerformTask(msg, 
-                                      request.session['task'], 
-                                      request.session['token'],
-                                      request.session['calendar_provider'],
-                                      request.session['calendar_id']).do_task()
-                    if output != None:
-                        request.session['event_times'] = output
-                    request.session['answers'][questionasked] = msg
-                    questionasked, task = request.session['questions'][count].split(':')[0], request.session['questions'][count].split(':')[1]
-                    request.session['questionasked'], request.session['task'] = questionasked, task
-                    request.session['count'] += 1
-                    return Response(questionasked, status=200)
-                
+                    #continue the process
+                    request.session = SessionManager(request.session, origin, msg).continue_process()
+                    return Response(request.session['questionasked'], status=200)
                 else:
-                    questionasked = request.session['questionasked']
-                    request.session['answers'][questionasked] = msg
-                    if request.session['event_times']:
-                        event = PerformTask(msg, 
-                                      request.session['task'], 
-                                      request.session['token'],
-                                      request.session['calendar_provider'],
-                                      request.session['calendar_id']).create_event(request.session['event_times']['start'],
-                                                                                   request.session['event_times']['end'],
-                                                                                   request.session['process'],
-                                                                                   description=request.session['answers'])                 
-                    request.session['questionasked'] = None
-                    request.session['process'] = None
-                    request.session['count'] = 0
-                    return Response(event, status=200)
+                    #complete the process
+                    request.session = SessionManager(request.session, origin, msg).complete_process()
+                    return Response(request.session['event'], status=200)
         payload = model_builder(os.path.join(settings.MEDIA_ROOT, request.session['file']))  
+        
         try: 
-            response = get_response(msg,
+            output = get_response(msg,
+                                    request.session['smart_funnel'],
                                     payload['model'], 
                                     payload['all_words'], 
                                     payload['tags'],
                                     request.session['intents'],
                                     torch.device('cpu')
                                     )
+               
             status_code = 200 
-            if response['process'] is None:
-                return Response(response['response'], status=status_code)
+            if output['process'] is None:
+                return Response(output['response'], status=status_code)
             else:
-                request.session['process'] = response['process']
-                return Response(response['response'], status=status_code)           
+                request.session['process'] = output['process']
+                return Response(output['response'], status=status_code)  
+        
         except:
             pass
-        response = 'Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.'
-        return Response(response, status=200)
+        output = 'Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.'
+        return Response(output, status=200)
+        
+    
+        
+
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class GetCSRFTokenView(GenericAPIView):
+    permission_classes = (permissions.AllowAny, )
+    def get(self, request, format=None):
+        return Response({'success':'CSRF Cookie set'})

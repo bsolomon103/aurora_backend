@@ -4,6 +4,7 @@ import pickle
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta
 import string
+from .descriptformat import DescFormatter
 
 class PerformTask:
     def __init__(self, message, task, tokenfile, provider, calendar_id):
@@ -21,10 +22,15 @@ class PerformTask:
     def check_availability(self):
         date = list(datefinder.find_dates(self.message))
         date = date[0] if len(date) > 0 else 'No date found'
+        
         start = date - timedelta(minutes=60)
+        return self._check_availability(start)
+    
+    def _check_availability(self, start):
         end  = start  + timedelta(minutes=60)
         start = start.isoformat(timespec='milliseconds') + 'z'
         end = end.isoformat(timespec='milliseconds') + 'z'
+     
         request_body = {
                         "timeMin": start,
                         "timeMax": end,
@@ -37,21 +43,30 @@ class PerformTask:
                                     }
                                 ]
                         }
-        credentials = pickle.load(open(os.path.abspath('files\\' + self.token), 'rb'))
+        credentials = pickle.load(open(os.path.abspath('media/' + self.token), 'rb'))
         service = build('calendar', 'v3', credentials=credentials)
         free_busy  = service.freebusy().query(body=request_body).execute()
-        if len(free_busy['calendars'][self.calendar_id]['busy']) == 0:
+        slot_len = len(free_busy['calendars'][self.calendar_id]['busy'])
+        if slot_len == 0:
+            print('Free timeslot')
             self.dc['start'], self.dc['end'] = start, end
-            return  self.dc
+            return self.dc
         else:
-            # rerun here till a free slot is found
-            pass
-    
+            print('Timeslot taken')
+            start = start[:-5]
+            start = list(datefinder.find_dates(start))[0] + timedelta(minutes=60)
+            return self._check_availability(start)
+            
+        
+            
     def create_event(self, start, end, summary, duration=1, description=None, location=None):
         text  = ''
-        for k,v in description.items():
-            load = k.translate(k.maketrans(' ',' ', '?.')) + '---' + v
-            text += load + '.\n'
+        formatt = DescFormatter(summary).skeleton()
+        for k,v in enumerate(description):
+        
+            payload = formatt[k] + ': ' + description[v]
+            #load = k.translate(k.maketrans(' ',' ', '?.')) + '---' + v
+            text += payload + '.\n'
         event = {
                     'summary': summary.capitalize(), # this will be the intent tag on backend
                     'location': 'Southend On Sea', # if room booking service is available write here/default loc
@@ -72,7 +87,7 @@ class PerformTask:
                             ],
                         },
                         }
-        credentials = pickle.load(open(os.path.abspath('files\\' + self.token), 'rb'))
+        credentials = pickle.load(open(os.path.abspath('media/' + self.token), 'rb'))
         service = build('calendar', 'v3', credentials=credentials)
         try:
             event  = service.events().insert(calendarId=self.calendar_id, body=event).execute()

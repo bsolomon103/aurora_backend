@@ -17,22 +17,24 @@ import pickle
 
 
 class ModelIngredients:
-    def __init__(self, customer_name):
-        self.customer = customer_name
+    def __init__(self, origin):
+        self.origin = origin
         self.dc = {}
   
     def pull_files(self):
-        obj = Models.objects.get(customer_name=self.customer)
+        obj = Models.objects.get(origin = self.origin)
         FILE = obj.training_file
         intents = obj.intent
         token = obj.tokens
-        return FILE, intents, token
+        smart_funnel = obj.smart_funnel
+        return FILE, intents, token,smart_funnel
       
     def extract_data(self):
-        file, intents,token = self.pull_files()
+        file, intents,token, smart_funnel = self.pull_files()
         self.dc['file'] = str(file)
         self.dc['intents'] = intents
         self.dc['token'] = str(token)
+        self.dc['smart_funnel'] = smart_funnel
         return self.dc
        
     def __set_item__(self, key, value):
@@ -40,8 +42,9 @@ class ModelIngredients:
     
     def __get__item__(self, key):
         return self.dc['key']
+        
 
-def get_response(msg, model, all_words, tags, intents, device):
+def _get_response(msg, model, all_words, tags, intents, device):
     sentence = tokenize(msg)
     X = bag_of_words(sentence, all_words)
     X = X.reshape(1, X.shape[0])
@@ -54,7 +57,6 @@ def get_response(msg, model, all_words, tags, intents, device):
     prob = probs[0][predicted.item()]
     dc = {}
     dc['process'] = None
-  
     # Client model call - first response to check if and only if a questions can't be matched will it proceed
     if prob.item() > 0.75:
         for intent in intents['intents']: 
@@ -62,7 +64,7 @@ def get_response(msg, model, all_words, tags, intents, device):
                 if tag.endswith('process'):
                     dc['process'] = tag
                 dc['response'] =  random.choices(intent['responses'])[0]
-                return dc      
+                return dc
     else:
         try:
             'consider moving these to a seperate file build an API class and just change the system content using a dictionary'    
@@ -94,12 +96,26 @@ def get_response(msg, model, all_words, tags, intents, device):
                     dc['response'] = response['choices'][0]['message']['content'].lower()
                     
                 return dc
-            #add the logic for handling where the msg can be rolles back into top layer model
-            # if match, split, make trans ans loop again. 
              
         except:
-            return 'Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.'
+            return 
+    
 
+def get_response(msg, smart_funnel, model, all_words, tags, intents, device):
+    dc = {}
+    if smart_funnel == 'False':
+        top = _get_response(msg, model, all_words, tags, intents, device)
+        dc['response'] = top['response']
+
+    else:
+        top = _get_response(msg, model, all_words, tags, intents, device)
+        bottom = _get_response(top['response'], model, all_words, tags, intents, device)
+        response  = f"{top['response']}.<br><br>{bottom['response']}"
+        dc['response'] = response
+    dc['process'] = top['process']
+    return dc
+    
+    
 
 def model_builder(trainingfile):
     dc = {}
@@ -111,6 +127,3 @@ def model_builder(trainingfile):
     dc['all_words'] = data['all_words']
     dc['model'] = model
     return dc
-
-def tmp_func(sessionobj):
-    print(sessionobj['intents'])
