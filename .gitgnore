@@ -1,5 +1,3 @@
-aurora/__pycache__
-aurora_api/__pycache__
-aurora_api/migrations/__pycache__
-venv
+/aurora_backend/aurora_api/__pycache__/
+venv/
 
