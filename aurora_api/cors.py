@@ -6,7 +6,7 @@ class CorsMiddleware:
         response = self.get_response(request)
 
         # Allow requests from all origins.
-        response['Access-Control-Allow-Origin'] = 'http://18.132.209.182:8080'
+        response['Access-Control-Allow-Origin'] = '258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com'
 
         # Allow specific headers to be sent.
         response['Access-Control-Allow-Headers'] = 'Content-Type'

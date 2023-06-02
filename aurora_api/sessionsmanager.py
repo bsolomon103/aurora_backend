@@ -7,6 +7,9 @@ class SessionManager:
         self.origin = origin
         self.keys = ['file','intents','token','smart_funnel']
         self.msg = msg
+    
+
+        
  
     def create_session(self):
             print('Session(no)')
@@ -17,22 +20,52 @@ class SessionManager:
             # load 'file' and 'intent' into session
             for k in self.keys:
                 self.sessionobj[k] = seasoning[k]
-                self.sessionobj['process'] = None  
+                self.sessionobj['input_tag'] = None  
                 self.sessionobj['questionasked'] = None 
                 self.sessionobj['answers'] = {}
                 self.sessionobj['count'] = 0  
             return self.sessionobj
     
     def terminate_process(self):
-        self.sessionobj['process'] = None
+        self.sessionobj['input_tag'] = None
         self.sessionobj['questionasked'] = None 
         self.sessionobj['answers'] = {}
         self.sessionobj['count'] = 0  
         self.sessionobj.flush()
         return self.sessionobj
     
+    def start_assessment(self):
+        input_tag = self.sessionobj["input_tag"]
+        intents = self.sessionobj['intents']
+        for i in intents['intents']:
+            if i['tag'] == 'assessment_nnex':
+                question = i['responses'][0] #change this to be in pattern eventually.
+        self.sessionobj['questionasked'] = question
+      
+        return self.sessionobj
+        
+    def start_booking(self):
+        intents = self.sessionobj['intents']
+        for i in intents['intents']:
+            if i['tag'] == 'booking_questions':
+                booking_questions = i['patterns']
+                self.sessionobj['booking_questions'] = booking_questions
+            if i['tag'] == 'calendar':
+                self.sessionobj['calendar_provider'], self.sessionobj['calendar_id'] = i['responses'][0].split(':')[0].strip(), i['responses'][0].split(':')[1].strip()
+        return self.sessionobj
+
+                
+                
+
+
+                
+        
+        
+    
+    
     def start_process(self):
         process = self.sessionobj['process']
+        process = '_'.join(process.split('_')[:-1])
         intents = self.sessionobj['intents']
         for i in intents['intents']:
             if i['tag'] == process + ' questions':

@@ -1,3 +1,5 @@
 /aurora_backend/aurora_api/__pycache__/
+/aurora_backend/aurora_api/migrations/
+/aurora_backend/aurora/__pycache__/
 venv/
 

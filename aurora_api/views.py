@@ -29,6 +29,7 @@ from rest_framework import permissions
 import json 
 import datefinder
 import pickle
+from django.middleware.csrf import get_token
 
 
 
@@ -37,8 +38,8 @@ import pickle
 class TestAPIView(GenericAPIView):
     def get(self, request):
         if "counter" in request.session and "counter" == 5:
-            return 
             request.session["counter"] += 1
+            return 
         else:
             request.session["counter"] = 1
         return HttpResponse(f"Counter: {request.session['counter']}")
@@ -98,28 +99,50 @@ class ModelTrainingView(View):
         else:
             print('Invalid Form')
             return render(request, self.template, context=ctx)
+            
      
 class ModelResponseAPI(APIView):
     '''Main API which user requests will hit and returns a response to their questions'''
+    
  
     serializer_class = MsgSerializer
+    
+ 
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, *kwargs)
 
     def post(self, request, *args, **kwargs): 
         #origin = request.META['HTTP_ORIGIN']
-        #origin = "doesn't matter yet"
-        origin = 'https://cd640da2747e45bdb08d9f115ec0fcda.vfs.cloud9.eu-west-2.amazonaws.com'
+        origin = 'https://eac946ea7313489f9f0055b8035f47bb.vfs.cloud9.eu-west-2.amazonaws.com/'
+        #origin = 'https://cd640da2747e45bdb08d9f115ec0fcda.vfs.cloud9.eu-west-2.amazonaws.com'
         serializer = self.serializer_class(data=request.data) 
+        
+        #print(request.META['HTTP_X_SESSION_ID'])
         
         if serializer.is_valid():
             msg  = serializer.data['msg']
+       
         if request.session.session_key is None:
             request.session = SessionManager(request.session, origin, msg).create_session()
             print('[*] A session has been created [*]')
         else:
-            #print('[*] A session exists [*]')
+            print('Session already exists !')
             if (msg.lower() == 'quit'):
                 request.session = SessionManager(request.session, origin, msg).terminate_process()
                 return Response('Process Terminated', status=200)
+    
+            elif (request.session['input_tag'].endswith('nnex') and msg.lower() == 'yes'):
+                #start assessment
+                request.session = SessionManager(request.session, origin, msg).start_assessment()
+                return Response(request.session['questionasked'], status=200)
+            
+            elif (request.session['input_tag'].endswith('booking') and msg.lower() == 'yes'):
+                #start booking
+                request.session = SessionManager(request.session, origin, msg).start_booking()
+                return Response(request.session['booking_questions'], status=200)
+          
+            '''
+            
             elif (request.session['questionasked'] == None and request.session['process'] != None and msg.lower() == 'yes'):
                 #start process
                 request.session = SessionManager(request.session, origin, msg).start_process()
@@ -138,7 +161,9 @@ class ModelResponseAPI(APIView):
                     #complete the process
                     request.session = SessionManager(request.session, origin, msg).complete_process()
                     return Response(request.session['event'], status=200)
+            '''
         payload = model_builder(os.path.join(settings.MEDIA_ROOT, request.session['file']))  
+
         
         try: 
             output = get_response(msg,
@@ -151,11 +176,16 @@ class ModelResponseAPI(APIView):
                                     )
                
             status_code = 200 
-            if output['process'] is None:
+            if output['input_tag'] is None:
                 return Response(output['response'], status=status_code)
             else:
-                request.session['process'] = output['process']
-                return Response(output['response'], status=status_code)  
+                request.session['input_tag'] = output['input_tag']
+                csrf_token = get_token(request)
+                response = Response(output['response'], status=status_code)  
+                response.set_cookie("csrftoken", csrf_token)
+                #response['X-Session-ID'] = request.session.session_key
+                
+                return response
         
         except:
             pass
@@ -164,9 +194,12 @@ class ModelResponseAPI(APIView):
         
     
         
-
+'''
 @method_decorator(ensure_csrf_cookie, name='dispatch')
 class GetCSRFTokenView(GenericAPIView):
     permission_classes = (permissions.AllowAny, )
     def get(self, request, format=None):
-        return Response({'success':'CSRF Cookie set'})
+        csrf_token = get_token(request)
+        return Response({'csrf_token': csrf_token})
+        
+'''

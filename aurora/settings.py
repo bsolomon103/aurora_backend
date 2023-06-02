@@ -29,9 +29,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['cd640da2747e45bdb08d9f115ec0fcda.vfs.cloud9.eu-west-2.amazonaws.com','*']
 
-INTERAL_IPS = [
-    '35.177.18.172',
-    ]
+
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -45,26 +43,29 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap4',
     
-    'corsheaders',
+ 
     'sslserver',
+    'corsheaders',
 
 
 ]
+#   'corsheaders',
+#"corsheaders.middleware.CorsMiddleware",
+ #"aurora_api.cors.CorsMiddleware",
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
 MIDDLEWARE = [
-    "aurora_api.cors.CorsMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-   
 ]
+
 
 
 ROOT_URLCONF = 'aurora.urls'
@@ -156,11 +157,13 @@ SESSION_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'Strict'
 
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'None'
-CSRF_TRUSTED_ORIGINS = ['https://eac946ea7313489f9f0055b8035f47bb.vfs.cloud9.eu-west-2.amazonaws.com', 'http://13.42.50.106']
+CSRF_TRUSTED_ORIGINS = ['https://eac946ea7313489f9f0055b8035f47bb.vfs.cloud9.eu-west-2.amazonaws.com',
+                        'https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com',
+                        'https://api.eazibots.com']
 
 
 # Optionally, you can add other CORS settings, such as:
@@ -187,7 +190,7 @@ CORS_ALLOW_HEADERS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    'http://18.132.209.182:8080',
+    
 ]
 
 
