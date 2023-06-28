@@ -4,16 +4,14 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 import torch
 
-User = get_user_model()
 
-class GetResponseTest(TestCase):
 
-    def setUp(self):
-        print('Test setting up')
-
-    def check_cuda(self):
-        device = torch.cuda.is_available()
-        if device == True:
-            print("GPU is available")
-        else:
-            print("GPU is not available")
+class SessionVariableTestCase(TestCase):
+    def test_count_is_number(self):
+        session = self.client.session
+        session["count"] = 10
+        session.save()
+        self.assertIsInstance(session["count"], (int, float), "Count is not a number")
+        session["count"] = "invalid"
+        session.save()
+        self.assertNotIsInstance(session["count"], (int, float), "Count is not a number")

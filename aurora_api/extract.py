@@ -1,5 +1,5 @@
 import os
-from .models import Models
+from .models import Models, Customer, AppCredentials
 import torch
 import json
 from .prediction_model import NeuralNet
@@ -7,15 +7,14 @@ from .nltk_utils import bag_of_words, tokenize
 import random
 import time
 import openai 
-openai.api_key = "*"
+openai.api_key = "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"
+from .openaiworkers import worker_one, worker_two
 import re
 import string
-from .modelencoder import processes
 from rest_framework.response import Response
 import pickle
-
-append_end = f"Type <img src='https://img.icons8.com/?size=512&id=1XyoV2ktiJK2&format=png'style='height: 20px; width: 25px;' alt='yes'></img> below to explore your options with one of our experts immediately."
-
+from .task_utils import PerformTask, FreeSlotChecker
+from .responsemanager import get_response_dates, get_response_booking, get_response_aurora
 
 class ModelIngredients:
     def __init__(self, origin):
@@ -23,19 +22,32 @@ class ModelIngredients:
         self.dc = {}
   
     def pull_files(self):
-        obj = Models.objects.get(origin = self.origin)
+        customer = Customer.objects.get(origin=self.origin)
+        customer_name = customer.name
+        customer_id = customer.id
+        calendar_id = customer.calendar_id
+        mappings = customer.mappings
+        booking_questions = customer.booking_questions
+        obj = Models.objects.get(customer_name=customer.id)
+        app_credentials = AppCredentials.objects.get(id=1)
+        secret = app_credentials.google_secret
         FILE = obj.training_file
         intents = obj.intent
-        token = obj.tokens
-        smart_funnel = obj.smart_funnel
-        return FILE, intents, token,smart_funnel
+        
+        return FILE, customer_name, customer_id, intents, secret, calendar_id, booking_questions, mappings
+      
       
     def extract_data(self):
-        file, intents,token, smart_funnel = self.pull_files()
+        file, customer_name, customer_id, intents, secret, calendar_id, booking_questions, mappings = self.pull_files()
         self.dc['file'] = str(file)
         self.dc['intents'] = intents
-        self.dc['token'] = str(token)
-        self.dc['smart_funnel'] = smart_funnel
+        self.dc['secret'] = str(secret)
+        self.dc['calendar_id'] = calendar_id
+        self.dc['booking_questions'] = booking_questions
+        self.dc['mappings'] = mappings
+        self.dc['customer_name'] = customer_name
+        self.dc['customer_id'] = customer_id
+        #print(booking_questions['booking questions'].keys())
         return self.dc
        
     def __set_item__(self, key, value):
@@ -53,45 +65,31 @@ def _get_response(msg, model, all_words, tags, intents, device):
     output = model(X)
     _,predicted = torch.max(output,dim=1)
     tag = tags[predicted.item()]
-
     probs = torch.softmax(output,dim=1)
     prob = probs[0][predicted.item()]
     dc = {}
     dc['input_tag'] = tag
-    print(tag, prob.item())
     # Client model call - first response to check if and only if a questions can't be matched will it proceed
-    if prob.item() > 0.99:
+    #print(prob.item(), tag)
+    if prob.item() >= 0.99:
         for intent in intents['intents']: 
             if tag == intent['tag']:
-                '''
-                if tag.endswith('assess') or tag.endswith('booking'):
-                    dc['process'] = tag
-                '''
                 dc['response'] =  random.choices(intent['responses'])[0]
-                return dc
     else:
-        'consider moving these to a seperate file build an API class and just change the system content using a dictionary'    
-        # Worker 1: 1st API call to check for a tag match
-        response = openai.ChatCompletion.create(
-            model = "gpt-3.5-turbo",
-
-            messages = [{'role': 'system', 'content': f"You are a helpful assistant that works for a dentist practise in the uk. You always provide responses limited to 25 words max. All responses that reference 'the dentist' should be changed to 'us' or 'we' as the dentist able to provide the services suggested."},
-                        {'role': 'user', 'content': msg}])
-      
-
-        response = response['choices'][0]['message']['content'].lower()
-        
-      
-        response = f"{response.capitalize()}<br/><br/>{append_end}"
+        response = worker_one(msg)
         dc['response'] = response
-        return dc
-        
-    
+    return dc
 
-def get_response(msg, smart_funnel, model, all_words, tags, intents, device):
-    output = _get_response(msg, model, all_words, tags, intents, device)
-    #print(output)
-    return output
+  
+def get_response(msg, model, all_words, tags, session, device):
+    if msg.lower() == 'book me':
+        response = get_response_dates(msg, session)
+    elif session['booking_on'] == True:
+        response = get_response_booking(msg, session)
+    else:
+        output = get_response_aurora(msg, model, all_words, tags, session, device)
+        response = output['response']
+    return response
     
     
 

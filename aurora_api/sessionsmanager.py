@@ -1,129 +1,48 @@
 from .extract import ModelIngredients
+from .models import AppCredentials, Customer
 from .task_utils import PerformTask
+from django.contrib.sessions.backends.db import SessionStore
+from django.contrib.sessions.models import Session
+from cryptography.fernet import Fernet
+import base64
+from .task_utils import PerformTask, FreeSlotChecker, get_free_dates
 
 class SessionManager:
-    def __init__(self, sessionobj, origin, msg):
-        self.sessionobj = sessionobj
+    def __init__(self, origin):
+        self._session = SessionStore()
         self.origin = origin
-        self.keys = ['file','intents','token','smart_funnel']
-        self.msg = msg
-    
-
+        self.keys = ['file','customer_name','customer_id','intents','secret','calendar_id','booking_questions', 'mappings']
         
- 
     def create_session(self):
-            print('Session(no)')
-            self.sessionobj.create()
-            print(f'New Session Created: {self.sessionobj.session_key}')
-            seasoning = ModelIngredients(self.origin).extract_data()
-            
-            # load 'file' and 'intent' into session
-            for k in self.keys:
-                self.sessionobj[k] = seasoning[k]
-                self.sessionobj['input_tag'] = None  
-                self.sessionobj['questionasked'] = None 
-                self.sessionobj['answers'] = {}
-                self.sessionobj['count'] = 0  
-            return self.sessionobj
-    
-    def terminate_process(self):
-        self.sessionobj['input_tag'] = None
-        self.sessionobj['questionasked'] = None 
-        self.sessionobj['answers'] = {}
-        self.sessionobj['count'] = 0  
-        self.sessionobj.flush()
-        return self.sessionobj
-    
-    def start_assessment(self):
-        input_tag = self.sessionobj["input_tag"]
-        intents = self.sessionobj['intents']
-        for i in intents['intents']:
-            if i['tag'] == 'assessment_nnex':
-                question = i['responses'][0] #change this to be in pattern eventually.
-        self.sessionobj['questionasked'] = question
-      
-        return self.sessionobj
-        
-    def start_booking(self):
-        intents = self.sessionobj['intents']
-        for i in intents['intents']:
-            if i['tag'] == 'booking_questions':
-                booking_questions = i['patterns']
-                self.sessionobj['booking_questions'] = booking_questions
-            if i['tag'] == 'calendar':
-                self.sessionobj['calendar_provider'], self.sessionobj['calendar_id'] = i['responses'][0].split(':')[0].strip(), i['responses'][0].split(':')[1].strip()
-        return self.sessionobj
-
-                
-                
+        self._session.create()
+        seasoning = ModelIngredients(self.origin).extract_data()
+        for k in self.keys:
+            self._session[k] = seasoning[k]
+        self._session['input_tag'] = None  
+        self._session['questionasked'] = None 
+        self._session['booking_on'] = False
+        self._session['answers'] = {}
+        self._session['count'] = 0 
+        self._session['messages'] = ''
+        self._session['summary'] = {}
+        self._session['question_asked'] = None
+        self._session['question_keys'] = []
+        self._session.save()
+        return self._session
 
 
-                
-        
-        
+class SessionEncrypt:
+    def __init__(self, encryption_key):
+        self.encryption_key = encryption_key
+        self.cipher = Fernet(self.encryption_key)
     
+    def encrypt_encode(self, session_key):
+        encoded_key = self.cipher.encrypt(session_key.encode())
+        encrypted_key = base64.urlsafe_b64encode(encoded_key).decode()
+        return encrypted_key
     
-    def start_process(self):
-        process = self.sessionobj['process']
-        process = '_'.join(process.split('_')[:-1])
-        intents = self.sessionobj['intents']
-        for i in intents['intents']:
-            if i['tag'] == process + ' questions':
-                questions = i['patterns']
-            if i['tag'] == 'calender':
-                self.sessionobj['calendar_provider'], self.sessionobj['calendar_id'] = i['responses'][0].split(':')[0].strip(), i['responses'][0].split(':')[1].strip()
-        self.sessionobj['questions'] = questions
-        count = self.sessionobj['count']
-        questionasked, task = self.sessionobj['questions'][count].split(':')[0], self.sessionobj['questions'][count].split(':')[1]
-        self.sessionobj['questionasked'] = questionasked
-        self.sessionobj['task'] = task
-        self.sessionobj['answers'][questionasked] = ''
-        self.sessionobj['count'] += 1
-        return self.sessionobj
-    
-    def continue_process(self):
-        count = self.sessionobj['count']
-        questionasked = self.sessionobj['questionasked']             
-        output = PerformTask(
-                self.msg,
-                self.sessionobj['task'], 
-                self.sessionobj['token'],
-                self.sessionobj['calendar_provider'],
-                self.sessionobj['calendar_id']).do_task()
-        print(output)
-        if output != None and 'start' in output:
-            self.sessionobj['event_times'] = output
-        self.sessionobj['answers'][questionasked] = self.msg
-        questionasked, task = self.sessionobj['questions'][count].split(':')[0], self.sessionobj['questions'][count].split(':')[1]
-        self.sessionobj['questionasked'], self.sessionobj['task'] = questionasked, task
-        self.sessionobj['count'] += 1
-            
-        return self.sessionobj
-    
-    
-    def complete_process(self):
-        questionasked = self.sessionobj['questionasked']
-        self.sessionobj['answers'][questionasked] = self.msg
-        if self.sessionobj['event_times']:
-            print(self.sessionobj['event_times'])
-            event = PerformTask(self.msg, 
-                                self.sessionobj['task'], 
-                                self.sessionobj['token'],
-                                self.sessionobj['calendar_provider'],
-                                self.sessionobj['calendar_id']).create_event(self.sessionobj['event_times']['start'],
-                                                                            self.sessionobj['event_times']['end'],
-                                                                            self.sessionobj['process'],
-                                                                            description=self.sessionobj['answers'])                 
-        self.sessionobj['questionasked'] = None
-        self.sessionobj['process'] = None
-        self.sessionobj['count'] = 0
-        self.sessionobj['event'] = event
-            
-        return self.sessionobj
-        
-    def kill_process(self):
-        self.sessionobj['process'] = None
-        self.sessionobj['count'] = 0
-        del self.sessionobj['intents']
-        return self.sessionobj
-                
+    def decrypt_decode(self, encrypted_key):
+        decoded_key = base64.urlsafe_b64decode(encrypted_key)
+        decrypted_key = self.cipher.decrypt(decoded_key).decode()
+        return decrypted_key
+

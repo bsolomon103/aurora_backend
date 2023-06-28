@@ -23,20 +23,6 @@ class UserTasks(TaskSet):
                 print(True)
          
     
-
-    
-    
-
-    
-
-            '''
-            if "Sauce Labs Swag Labs app" in response.text and response.status_code == 200:
-                response.success()
-            else:
-                response.failure('Failed to access base url')
-            '''
-           
-
 class BasicUser(HttpUser):
     host = "http://127.0.0.1:8080/api/response"
     wait_time = between(4,8)

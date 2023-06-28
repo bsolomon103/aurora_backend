@@ -10,12 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
+from corsheaders.defaults import default_headers
+import datetime
 from pathlib import Path
 import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-import datetime
-from corsheaders.defaults import default_headers
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,8 +27,8 @@ SECRET_KEY = 'django-insecure-6mia@9h-qqg9qffvvz)i(@%h8o9t6ug2@biz(j49c2j%#@+(as
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['cd640da2747e45bdb08d9f115ec0fcda.vfs.cloud9.eu-west-2.amazonaws.com','*']
-
+ALLOWED_HOSTS = [
+    'cd640da2747e45bdb08d9f115ec0fcda.vfs.cloud9.eu-west-2.amazonaws.com', '*']
 
 
 INSTALLED_APPS = [
@@ -39,19 +39,20 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'aurora_api',
+    'stripeaccounts',
     'rest_framework',
     'crispy_forms',
     'crispy_bootstrap4',
-    
- 
+
+
     'sslserver',
     'corsheaders',
 
 
 ]
 #   'corsheaders',
-#"corsheaders.middleware.CorsMiddleware",
- #"aurora_api.cors.CorsMiddleware",
+# "corsheaders.middleware.CorsMiddleware",
+# "aurora_api.cors.CorsMiddleware",
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
@@ -65,7 +66,6 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
 
 
 ROOT_URLCONF = 'aurora.urls'
@@ -150,14 +150,15 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-
-#SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
+# SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
-SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_COOKIE_SAMESITE = None
+SESSION_COOKIE_DOMAIN = 'api.eazibots.com'
+
 
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'None'
@@ -187,17 +188,28 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-session-id'
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    
+    'http://127.0.0.1:3000',
+    'http://localhost:3000',
+    'https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com'
 ]
 
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_WHITELIST = [
+    'http://127.0.0.1:3000',
+    'http://localhost:3000',
+    'https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com',
+    'http://18.133.120.81:8080'
+]
 
 
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
+        #"LOCATION": "redis://@127.0.0.1:6379/1",
         "LOCATION": "redis://:Aurora24@172.31.40.69:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
@@ -205,4 +217,7 @@ CACHES = {
     }
 }
 
+
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024  # 20MB or the same value as Nginx configuration
 

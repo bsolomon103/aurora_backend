@@ -7,17 +7,16 @@ from .forms import ModelTrainingForm
 from django.views import View
 from .prediction_train import ModelTrainingObject
 from .prediction_model import NeuralNet
-from .models import Models, Customer
+from .models import Models, Customer, Image
 import random, string 
 import torch
 from .extract import ModelIngredients, get_response, model_builder
-from .sessionsmanager import SessionManager
+from .sessionsmanager import SessionManager, SessionEncrypt
 from .nltk_utils import tokenize, bag_of_words
-from .serializers import MsgSerializer, GetClientSerializer
+from .serializers import MsgSerializer, GetClientSerializer, ImageSerializer
 from django.urls import reverse_lazy
 import os
 from django.conf import settings
-from .task_utils import PerformTask
 from rest_framework.views import APIView
 from asgiref.sync import sync_to_async
 import time
@@ -30,11 +29,14 @@ import json
 import datefinder
 import pickle
 from django.middleware.csrf import get_token
+from django.contrib.sessions.models import Session
+from django.contrib.sessions.backends.db import SessionStore
+from django.core.signing import Signer
+import base64
+from cryptography.fernet import Fernet
 
 
 
-
-# Create your views here.
 class TestAPIView(GenericAPIView):
     def get(self, request):
         if "counter" in request.session and "counter" == 5:
@@ -43,11 +45,7 @@ class TestAPIView(GenericAPIView):
         else:
             request.session["counter"] = 1
         return HttpResponse(f"Counter: {request.session['counter']}")
-    
 
-
-        #return Response({"message: Start building here"})
-    
 
 class ModelTrainingView(View):
     template = 'components/training.html'
@@ -103,103 +101,72 @@ class ModelTrainingView(View):
      
 class ModelResponseAPI(APIView):
     '''Main API which user requests will hit and returns a response to their questions'''
-    
- 
     serializer_class = MsgSerializer
-    
- 
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, *kwargs)
+    encryption_key = Fernet.generate_key()
 
-    def post(self, request, *args, **kwargs): 
-        #origin = request.META['HTTP_ORIGIN']
-        origin = 'https://eac946ea7313489f9f0055b8035f47bb.vfs.cloud9.eu-west-2.amazonaws.com/'
-        #origin = 'https://cd640da2747e45bdb08d9f115ec0fcda.vfs.cloud9.eu-west-2.amazonaws.com'
+    def post(self, request, *args, **kwargs):
+        origin = request.META['HTTP_ORIGIN']
         serializer = self.serializer_class(data=request.data) 
         
-        #print(request.META['HTTP_X_SESSION_ID'])
-        
         if serializer.is_valid():
-            msg  = serializer.data['msg']
-       
-        if request.session.session_key is None:
-            request.session = SessionManager(request.session, origin, msg).create_session()
-            print('[*] A session has been created [*]')
-        else:
-            print('Session already exists !')
-            if (msg.lower() == 'quit'):
-                request.session = SessionManager(request.session, origin, msg).terminate_process()
-                return Response('Process Terminated', status=200)
-    
-            elif (request.session['input_tag'].endswith('nnex') and msg.lower() == 'yes'):
-                #start assessment
-                request.session = SessionManager(request.session, origin, msg).start_assessment()
-                return Response(request.session['questionasked'], status=200)
+            msg  = serializer.data['msg'] if serializer.data['msg'] is not None else 'Progress Chat'
+            key = serializer.data['session_key']
+            image = serializer.validated_data.get('image_upload')
             
-            elif (request.session['input_tag'].endswith('booking') and msg.lower() == 'yes'):
-                #start booking
-                request.session = SessionManager(request.session, origin, msg).start_booking()
-                return Response(request.session['booking_questions'], status=200)
-          
-            '''
-            
-            elif (request.session['questionasked'] == None and request.session['process'] != None and msg.lower() == 'yes'):
-                #start process
-                request.session = SessionManager(request.session, origin, msg).start_process()
-                return Response(request.session['questionasked'], status=200)
-            elif (request.session['questionasked'] == None and request.session['process']  != None and msg.lower() == 'no'):
-                #kill process
-                request.session = SessionManager(request.session, origin, msg).kill_process()
-                return Response('Process Terminated', status=200)
-            elif (request.session['questionasked'] != None and request.session['process'] != None):
-                count = request.session['count']
-                if count < len(request.session['questions']):
-                    #continue the process
-                    request.session = SessionManager(request.session, origin, msg).continue_process()
-                    return Response(request.session['questionasked'], status=200)
-                else:
-                    #complete the process
-                    request.session = SessionManager(request.session, origin, msg).complete_process()
-                    return Response(request.session['event'], status=200)
-            '''
-        payload = model_builder(os.path.join(settings.MEDIA_ROOT, request.session['file']))  
-
         
+        if key == '':
+            session = SessionManager(origin).create_session()
+            key = session.session_key
+            session['session_key'] = key
+ 
+        else:
+            session = SessionStore(session_key=key)
+        
+        payload = model_builder(os.path.join(settings.MEDIA_ROOT, session['file']))  
         try: 
             output = get_response(msg,
-                                    request.session['smart_funnel'],
-                                    payload['model'], 
-                                    payload['all_words'], 
-                                    payload['tags'],
-                                    request.session['intents'],
-                                    torch.device('cpu')
-                                    )
-               
-            status_code = 200 
-            if output['input_tag'] is None:
-                return Response(output['response'], status=status_code)
-            else:
-                request.session['input_tag'] = output['input_tag']
-                csrf_token = get_token(request)
-                response = Response(output['response'], status=status_code)  
-                response.set_cookie("csrftoken", csrf_token)
-                #response['X-Session-ID'] = request.session.session_key
-                
-                return response
-        
+            payload['model'], 
+            payload['all_words'], 
+            payload['tags'],
+            session,
+            torch.device('cpu'))
         except:
-            pass
-        output = 'Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.'
-        return Response(output, status=200)
+            output = 'Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.'
+            
+        data = {
+                'session_key': key,
+                'response': output
+            }
         
-    
+        response = Response(data, status=200)  
+        return response
         
-'''
-@method_decorator(ensure_csrf_cookie, name='dispatch')
-class GetCSRFTokenView(GenericAPIView):
-    permission_classes = (permissions.AllowAny, )
-    def get(self, request, format=None):
-        csrf_token = get_token(request)
-        return Response({'csrf_token': csrf_token})
+
+class ImageUploadAPI(APIView):
+    serializer_class = ImageSerializer
+    def post(self, request, *args, **kwargs):
+        origin = request.META['HTTP_ORIGIN']
+        customer = Customer.objects.get(origin=origin)
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            #print(serializer)
+            image_upload = serializer.validated_data.get('image_upload')
+            session_key = serializer.data.get('session_key')
+
+            
         
-'''
+            '''
+            if image:
+
+                image_instance = Image.objects.create(
+                                                    image_field=image,
+                                                    customer=customer,
+                                                    name = 
+                )
+                session['images'] = image_instance['image_file']
+                print(session['images'])
+            
+            '''
+        return Response('Image Uploaded Successfully')
+        
+            
