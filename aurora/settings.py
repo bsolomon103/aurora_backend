@@ -155,7 +155,8 @@ SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_SECURE = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
+#'django.contrib.sessions.backends.cache'
 SESSION_COOKIE_SAMESITE = None
 SESSION_COOKIE_DOMAIN = 'api.eazibots.com'
 

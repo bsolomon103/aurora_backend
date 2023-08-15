@@ -105,14 +105,16 @@ class ModelResponseAPI(APIView):
     encryption_key = Fernet.generate_key()
 
     def post(self, request, *args, **kwargs):
+    #print('here')
         origin = request.META['HTTP_ORIGIN']
+        #origin  = 'http://18.130.55.240:8080'
         serializer = self.serializer_class(data=request.data) 
         
         if serializer.is_valid():
             msg  = serializer.data['msg'] if serializer.data['msg'] is not None else 'Progress Chat'
             key = serializer.data['session_key']
             image = serializer.validated_data.get('image_upload')
-            
+
         
         if key == '':
             session = SessionManager(origin).create_session()
@@ -130,7 +132,8 @@ class ModelResponseAPI(APIView):
             payload['tags'],
             session,
             torch.device('cpu'))
-        except:
+        except Exception as e:
+            print(e)
             output = 'Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.'
             
         data = {

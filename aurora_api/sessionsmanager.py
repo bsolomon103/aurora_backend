@@ -11,7 +11,7 @@ class SessionManager:
     def __init__(self, origin):
         self._session = SessionStore()
         self.origin = origin
-        self.keys = ['file','customer_name','customer_id','intents','secret','calendar_id','booking_questions', 'mappings']
+        self.keys = ['file','customer_name','customer_id','intents','secret','calendar_id','booking_questions', 'mappings','closing','treatment_init','email']
         
     def create_session(self):
         self._session.create()
@@ -19,14 +19,19 @@ class SessionManager:
         for k in self.keys:
             self._session[k] = seasoning[k]
         self._session['input_tag'] = None  
-        self._session['questionasked'] = None 
+        #self._session['questionasked'] = None 
         self._session['booking_on'] = False
         self._session['answers'] = {}
         self._session['count'] = 0 
-        self._session['messages'] = ''
+        self._session['messages'] = []
         self._session['summary'] = {}
+        self._session['consultation_summary'] = []
         self._session['question_asked'] = None
         self._session['question_keys'] = []
+        self._session['no_sale'] = False
+        self._session['level1'] = False
+        self._session['level2'] = False
+        self._session['level3'] = False
         self._session.save()
         return self._session
 

@@ -8,6 +8,8 @@ class Treatments(models.Model):
     customer_name = models.ForeignKey('Customer', on_delete=models.CASCADE, null=False)
     treatment = models.CharField(max_length=200, unique=True, null=True)
     description = models.TextField(null=True)
+    booking_duration = models.IntegerField(null=True)
+    calendar_id = models.CharField(max_length=200, null=True)
     
     def __str__(self):
         return self.treatment
@@ -20,6 +22,10 @@ class Customer(models.Model):
     booking_questions = models.JSONField(null=True)
     mappings = models.JSONField(null=True)
     products = models.ManyToManyField(Treatments, through='TreatmentSeller')
+    phone_number = models.CharField(max_length=15, null=True)
+    email = models.CharField(max_length=150, null=True)
+    closing = models.JSONField(null=True)
+    treatment_init = models.JSONField(null=True)
     
     def __str__(self):
         return self.name
@@ -56,4 +62,23 @@ class Image(models.Model):
     
     def __str__(self):
         return self.name
-    
+
+class Booking(models.Model):
+    booking_date = models.CharField(max_length=50)
+    patient_name = models.CharField(max_length=50)
+    patient_email = models.CharField(max_length=250, null=True)
+    patient_phone = models.CharField(max_length=15, null=True)
+    practise_name = models.CharField(max_length=250, null=True)
+    practise_email = models.CharField(max_length=250, null=True)
+    practise_phone = models.CharField(max_length=15, null=True)
+    treatment = models.CharField(max_length=250, null=True)
+    summary = models.JSONField(null=True)
+    #practise_name = models.ForeignKey('Customer', on_delete=models.CASCADE, null=False)
+    #treatment = models.ForeignKey('Treatments', on_delete=models.CASCADE, null=False)
+    #email = models.CharField(max_length=200)
+    booking_status = models.CharField(max_length=50, default='unpaid')
+    price = models.IntegerField(default=1)
+    calendar_id = models.CharField(max_length=100, default= '')
+    #phone = models.CharField(max_length=15, null=True)
+    sessionid = models.CharField(max_length=100, null=True)
+    booking_duration = models.IntegerField(default=15)

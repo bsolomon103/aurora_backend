@@ -1,5 +1,7 @@
 import datefinder
 import os
+import re
+from word2number import w2n
 import pickle
 import dill
 from googleapiclient.discovery import build
@@ -11,6 +13,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 import os
+from aurora_api.models import AppCredentials
 
 scopes = ['https://www.googleapis.com/auth/calendar']
 
@@ -106,14 +109,16 @@ class PerformTask:
     
     
 class FreeSlotChecker:
-    def __init__(self, credentials):
+    def __init__(self, credentials, calendar_id, booking_duration):
         #self.credentials = pickle.load(open(os.path.abspath('media/' + credentials), 'rb'))
         self.credentials = credentials
         self.utc = pytz.timezone('UTC')
         self.start_time = datetime.now(self.utc).replace(minute=0, second=0, microsecond=0)
         self.start_time_str = self.start_time.isoformat()
-        self.end_time = self.start_time + timedelta(days=1)
+        self.end_time = self.start_time + timedelta(days=20)
         self.end_time_str = self.end_time.isoformat()
+        self.calendar_id = calendar_id
+        self.booking_duration = booking_duration
         self.service = build('calendar', 'v3', credentials=self.credentials)
     
     def refresh_token(self):
@@ -126,11 +131,11 @@ class FreeSlotChecker:
         free_busy = self.service.freebusy().query(body={
             'timeMin': self.start_time_str,
             'timeMax': self.end_time_str,
-            'items': [{'id': 'primary'}]  # 'primary' refers to the primary calendar of the authenticated user
+            'items': [{'id': self.calendar_id}]  # 'primary' refers to the primary calendar of the authenticated user
         }).execute()
         
         # Extract the free slots from the response
-        busy_slots = free_busy['calendars']['primary']['busy']
+        busy_slots = free_busy['calendars'][self.calendar_id]['busy']
         free_slots = []
            
         # Calculate the free slots within the time range
@@ -138,7 +143,7 @@ class FreeSlotChecker:
       
         while current_time < self.end_time:
             slot_start = current_time
-            slot_end = current_time + timedelta(minutes=60)
+            slot_end = current_time + timedelta(minutes=self.booking_duration)
             slot = {'start': slot_start.isoformat(), 'end': slot_end.isoformat()}
 
             # Check if the slot is not part of any busy slot
@@ -153,7 +158,7 @@ class FreeSlotChecker:
                     break
             if is_free:
                 free_slots.append(slot)
-            current_time += timedelta(minutes=60)
+            current_time += timedelta(minutes=self.booking_duration)
             
         return free_slots
                
@@ -172,10 +177,120 @@ class FreeSlotChecker:
                 brit_slots += [slot]
         return brit_slots
 
-def get_free_dates(client_secret_file):
+def get_free_dates(client_secret_file, calendar_id, booking_duration):
     client_secret_file = os.path.abspath('media/'+ client_secret_file)
     credentials = Credentials.from_service_account_file(client_secret_file,scopes=scopes)
-    x = FreeSlotChecker(credentials).convert_brtz()
+    x = FreeSlotChecker(credentials, calendar_id, booking_duration).convert_brtz()
     return x
+    
+def convert_utc(datetimestr, booking_duration):
+    utc = pytz.timezone('UTC')
+    converted = datetime.strptime(datetimestr, '%Y-%m-%dT%H:%M:%S%z').astimezone(utc)
+    start = converted.isoformat()
+    end = (converted + timedelta(minutes=booking_duration)).isoformat()
+    return start, end
+    
+
+def create_event(timeobj, calendar_id, booking_duration, description=None, location=None):
+    start, end = convert_utc(timeobj, booking_duration)
+    event = {
+        'summary': 'Test Event', # this will be the intent tag on backend
+        'location': 'Southend On Sea', # if room booking service is available write here/default loc
+        'description': description,
+        'start': {
+            'dateTime': start,
+            'timeZone': 'Europe/London',
+        },
+        'end': {
+            'dateTime': end,
+            'timeZone': 'Europe/London',
+        },
+        'reminders': {
+            'useDefault': False,
+            'overrides': [
+                {'method': 'email', 'minutes': 24 * 60},
+                {'method': 'popup', 'minutes': 10},
+            ],
+        },
+    }
+    app_credentials = AppCredentials.objects.get(id=1)
+    secret = app_credentials.google_secret
+    client_secret_file = os.path.abspath('media/'+ str(secret))
+    print(client_secret_file)
+    credentials = Credentials.from_service_account_file(client_secret_file,scopes=scopes)
+    try:
+        service = build('calendar', 'v3', credentials=credentials)
+        service.events().insert(calendarId=calendar_id, body=event).execute()
+    except Exception as e:
+        print(e)
+    return None
+    
+
+def check_start_assessment(text):
+    target_phrase = ['how do i schedule an appointment', "How do I book an appointment?",
+                    "how do i buy this?",
+                    "how do i book this?",
+                    "Hi i want to book this",
+                    "How do i get in touch?",
+                    "I want to book this",
+                    "can I book an appointment",
+                    "how can i book",
+                    "i want to come in for a consultation",
+                    "can i please book"
+                    ]
+                    
+    threshold = 0.65  # Adjust the threshold as needed
+
+    # Remove whitespace and convert the input text to lowercase
+    processed_text = text.strip().lower()
+
+    # Calculate the Levenshtein distance between the target phrase and each substring
+    for i in range(len(processed_text)):
+        for j in range(i + 1, len(processed_text) + 1):
+            substring = processed_text[i:j]
+            for t in target_phrase:
+                distance = levenshtein_distance(t, substring)
+                similarity = 1 - (distance / max(len(target_phrase), len(substring)))
+                
+                # Check if the similarity exceeds the threshold
+                if similarity >= threshold:
+                    #print('Yes')
+                    return True
+
+    return False
 
 
+def levenshtein_distance(s, t):
+    m, n = len(s), len(t)
+    dp = [[0] * (n + 1) for _ in range(m + 1)]
+
+    for i in range(m + 1):
+        dp[i][0] = i
+    for j in range(n + 1):
+        dp[0][j] = j
+
+    for i in range(1, m + 1):
+        for j in range(1, n + 1):
+            cost = 0 if s[i - 1] == t[j - 1] else 1
+            dp[i][j] = min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+
+    return dp[m][n]
+    
+
+def extract_numbers(text):
+    pattern = r'\b(\d+|[a-zA-Z]+)\b'
+    matches = re.findall(pattern, text)
+    numbers = []
+    
+    for match in matches:
+        try:
+            number = int(match)  # Try converting to integer
+            numbers.append(number)
+        except ValueError:
+            try:
+                number = w2n.word_to_num(match)  # Convert word-based numbers to integers
+                numbers.append(number)
+            except ValueError:
+                continue  # Ignore if neither an integer nor a word-based number
+    
+    return numbers[0]

@@ -13,8 +13,8 @@ import re
 import string
 from rest_framework.response import Response
 import pickle
-from .task_utils import PerformTask, FreeSlotChecker
-from .responsemanager import get_response_dates, get_response_booking, get_response_aurora
+from .task_utils import PerformTask, FreeSlotChecker, get_free_dates, check_start_assessment
+from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_callback
 
 class ModelIngredients:
     def __init__(self, origin):
@@ -28,17 +28,20 @@ class ModelIngredients:
         calendar_id = customer.calendar_id
         mappings = customer.mappings
         booking_questions = customer.booking_questions
+        closing = customer.closing
         obj = Models.objects.get(customer_name=customer.id)
         app_credentials = AppCredentials.objects.get(id=1)
         secret = app_credentials.google_secret
         FILE = obj.training_file
+        treatment_init = customer.treatment_init
+        email = customer.email
+        #print(FILE)
         intents = obj.intent
-        
-        return FILE, customer_name, customer_id, intents, secret, calendar_id, booking_questions, mappings
+        return FILE, customer_name, customer_id, intents, secret, calendar_id, booking_questions, mappings, closing, treatment_init, email
       
       
     def extract_data(self):
-        file, customer_name, customer_id, intents, secret, calendar_id, booking_questions, mappings = self.pull_files()
+        file, customer_name, customer_id, intents, secret, calendar_id, booking_questions, mappings, closing, treatment_init, email = self.pull_files()
         self.dc['file'] = str(file)
         self.dc['intents'] = intents
         self.dc['secret'] = str(secret)
@@ -47,6 +50,9 @@ class ModelIngredients:
         self.dc['mappings'] = mappings
         self.dc['customer_name'] = customer_name
         self.dc['customer_id'] = customer_id
+        self.dc['closing'] = closing
+        self.dc['treatment_init'] = treatment_init
+        self.dc['email'] = email
         #print(booking_questions['booking questions'].keys())
         return self.dc
        
@@ -56,40 +62,22 @@ class ModelIngredients:
     def __get__item__(self, key):
         return self.dc['key']
         
-
-def _get_response(msg, model, all_words, tags, intents, device):
-    sentence = tokenize(msg)
-    X = bag_of_words(sentence, all_words)
-    X = X.reshape(1, X.shape[0])
-    X = torch.from_numpy(X).to(device)
-    output = model(X)
-    _,predicted = torch.max(output,dim=1)
-    tag = tags[predicted.item()]
-    probs = torch.softmax(output,dim=1)
-    prob = probs[0][predicted.item()]
-    dc = {}
-    dc['input_tag'] = tag
-    # Client model call - first response to check if and only if a questions can't be matched will it proceed
-    #print(prob.item(), tag)
-    if prob.item() >= 0.99:
-        for intent in intents['intents']: 
-            if tag == intent['tag']:
-                dc['response'] =  random.choices(intent['responses'])[0]
-    else:
-        response = worker_one(msg)
-        dc['response'] = response
-    return dc
-
-  
 def get_response(msg, model, all_words, tags, session, device):
-    if msg.lower() == 'book me':
-        response = get_response_dates(msg, session)
-    elif session['booking_on'] == True:
+    #print(check_start_assessment(msg.lower()))
+    if session['level2'] and msg.lower() == 'yes':
+        start_assessment(msg, session)#
+    if msg.lower() in ('start','start consultation', 'start assessment') or check_start_assessment(msg.lower()):
+        start_assessment(msg, session)
+    if (session['booking_on']):
         response = get_response_booking(msg, session)
+        return response
+    elif(session['level3'] and msg.lower() != 'no'):
+        response = get_response_callback(msg, session)
+        return response
     else:
         output = get_response_aurora(msg, model, all_words, tags, session, device)
         response = output['response']
-    return response
+        return response
     
     
 

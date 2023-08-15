@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Models, Customer, AppCredentials, Treatments, Price, TreatmentSeller
+from .models import Models, Customer, AppCredentials, Treatments, Price, TreatmentSeller, Booking
 
 
 
@@ -21,6 +21,9 @@ class TreatmentSellerAdmin(admin.ModelAdmin):
 
 class AppCredentialsAdmin(admin.ModelAdmin):
     list_display = ['platform']
+    
+class BookingAdmin(admin.ModelAdmin):
+    list_display = ['treatment','patient_name','practise_name','practise_email','patient_email','patient_phone','booking_date','price','booking_status', 'booking_duration']
 
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Models, ModelAdmin)
@@ -28,4 +31,5 @@ admin.site.register(AppCredentials, AppCredentialsAdmin)
 admin.site.register(Treatments, TreatmentAdmin)
 admin.site.register(Price, PriceAdmin)
 admin.site.register(TreatmentSeller, TreatmentSellerAdmin)
+admin.site.register(Booking, BookingAdmin)
 
