@@ -23,7 +23,7 @@ class AppCredentialsAdmin(admin.ModelAdmin):
     list_display = ['platform']
     
 class BookingAdmin(admin.ModelAdmin):
-    list_display = ['treatment','patient_name','practise_name','practise_email','patient_email','patient_phone','booking_date','price','booking_status', 'booking_duration']
+    list_display = ['treatment','patient_name','practise_name','practise_email','patient_email','patient_phone','booking_date','price','booking_status', 'booking_duration','setting']
 
 admin.site.register(Customer, CustomerAdmin)
 admin.site.register(Models, ModelAdmin)

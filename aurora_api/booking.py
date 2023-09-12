@@ -7,6 +7,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from django.contrib.sessions.backends.db import SessionStore
 import os
+import json
+from email.mime.application import MIMEApplication
 
 def update_create_event(username, useremail):
     print(username, username)
@@ -18,11 +20,16 @@ def update_create_event(username, useremail):
     booking_obj.save()
     event_date = booking_obj.booking_date
     calendar_id = booking_obj.calendar_id
-    duration = booking_obj.booking_duration
+    patient_name = booking_obj.patient_name
+    treatment = booking_obj.treatment
+    setting = booking_obj.setting
+    duration = booking_obj.booking_duration if event_date != 'payment' else 0
     
+
     #Function to create calendar event
-    create_event(event_date, calendar_id, duration)
-    #Function to send confirmation emailss
+    if event_date != 'payment':
+        create_event(patient_name, treatment, event_date, booking_obj.setting, calendar_id, duration)
+    print('skeeyee')
     send_email(booking_obj)
     
 
@@ -39,10 +46,11 @@ def update_failed_event(username, useremail):
 
 
 def send_email(booking_obj):
+    
     # Set up the SMTP server and login
-    smtp_server = "smtp.mail.yahoo.com" # Replace with your SMTP server address
+    smtp_server = "smtp.ionos.co.uk" # Replace with your SMTP server address
     smtp_port = 587  # Replace with the appropriate port number
-    smtp_username = 'biokporsolomon@yahoo.co.uk'
+    smtp_username = 'solomon@eazibots.com'
     smtp_password = os.environ['SMTP_PASSWORD']
     #"fntqybkejdfuwida"  
     
@@ -62,40 +70,69 @@ def send_email(booking_obj):
 
 def send_to_user(booking_obj, server):
     email_message = MIMEMultipart()
-    email_message["From"] = 'biokporsolomon@yahoo.co.uk'
+    email_message["From"] = 'solomon@eazibots.com'
     email_message["To"] = booking_obj.patient_email
-    email_message["Subject"] = f"{booking_obj.practise_name} appointment confirmation"
+    if booking_obj.setting.lower() == 'payment':
+        prefix = "Payment confirmation for "
+        datevar = "Payment Date"
+        timevar = "Payment Time"
+    elif booking_obj.setting.lower() == 'in-person':
+        prefix = 'In person appointment confirmation for '
+        datevar = "Appointment Date"
+        timevar = "Appointment Time"
+    
+    else:
+        prefix = 'Call back confirmation for '
+        datevar = "Call Back Date"
+        timevar = "Call Back Time"
+        
+    email_message["Subject"] = f"{prefix}{booking_obj.treatment} with {booking_obj.practise_name}"
     date = booking_obj.booking_date.split('T')[0]
     time = booking_obj.booking_date.split('T')[1].split('+')[0]
-    message = f"Hi {booking_obj.patient_name.split()[0]},\n\nThis is a confirmation email, see below for full details.\n\nTreatment: {booking_obj.treatment}\nPractise Name: {booking_obj.practise_name}\nBooking Date: {date}\nBooking Time: {time}\n\nIf you have any questions feel free to reach out to {booking_obj.practise_name}\nEmail: {booking_obj.practise_email}\nPhone: {booking_obj.practise_phone}\nKind Regards,\nEaziBots"
+    
+    message = f"Hi {booking_obj.patient_name.split()[0]},\n\nThis is a confirmation email, see below for full details.\n\nTreatment: {booking_obj.treatment}\nPractise Name: {booking_obj.practise_name}\n{datevar} {date}\n{timevar} {time}\nAmount Paid: {booking_obj.price}\n\nIf you have any questions feel free to reach out to {booking_obj.practise_name}\nEmail: {booking_obj.practise_email}\nPhone: {booking_obj.practise_phone}\nKind Regards,\nEaziBots"
     # Add the message body
     email_message.attach(MIMEText(message, "plain"))
+    
+
         
     # Send the email
-    server.sendmail('biokporsolomon@yahoo.co.uk', email_message['To'], email_message.as_string())
+    server.sendmail(email_message['From'], email_message['To'], email_message.as_string())
     print(f"Email sent to {email_message['To']}")
     
 def send_to_practise(booking_obj, server):
     email_message = MIMEMultipart()
-    email_message["From"] = 'biokporsolomon@yahoo.co.uk'
+    email_message["From"] = 'solomon@eazibots.com'
     email_message["To"] = booking_obj.practise_email
-    email_message["Subject"] = f"EaziBots Confirmation: Scheduled Appointment with {booking_obj.patient_name} for {booking_obj.treatment}"
+    if booking_obj.setting.lower() == 'payment':
+        prefix = "Payment confirmation for "
+        datevar = "Payment Date"
+        timevar = "Payment Time"
+    elif booking_obj.setting.lower() == 'in-person':
+        prefix = 'In person appointment confirmation for '
+        datevar = "Appointment Date"
+        timevar = "Appointment Time"
+    else:
+        prefix = 'Call back confirmation for '
+        datevar = "Call Back Date"
+        timevar = "Call Back Time"
+    email_message["Subject"] = f"{prefix}{booking_obj.patient_name} for {booking_obj.treatment}"
     date = booking_obj.booking_date.split('T')[0]
     time = booking_obj.booking_date.split('T')[1].split('+')[0]
-    total_summary = ''
-    for k, v in dict(booking_obj.summary).items():
-        if k.lower() not in ('sales question','phone','email','client name','treatment category','booking_date','customer_name'):
-            ind_summary = k + ' : ' + v + '\n'
-            total_summary += ind_summary
-        #print(total_summary)
-            
-        #print(k,v)
-    message = f"Hi {booking_obj.practise_name},\n\nThis is a confirmation email, see below for full details.\n\nTreatment: {booking_obj.treatment}\nPatient Name: {booking_obj.patient_name}\nOrder ID: {booking_obj.id}\nBooking Date: {date}\nBooking Time: {time}\nEmail: {booking_obj.patient_email}\nPhone Number: {booking_obj.patient_phone}\n{total_summary}.\nIf you have any questions regarding this booking reach out to us on orders@eazibots.com and quote the order id.\n\nKind regards,\nEaziBots"
+
+    message = f"Hi {booking_obj.practise_name},\n\nThis is a confirmation email, see below for full details.\n\nTreatment: {booking_obj.treatment}\nPatient Name: {booking_obj.patient_name}\nOrder ID: {booking_obj.id}\n{datevar} {date}\n{timevar} {time}\nEmail: {booking_obj.patient_email}\nPhone Number: {booking_obj.patient_phone}\nAmount Paid: {booking_obj.price}.\nIf you have any questions regarding this booking reach out to us on solomon@eazibots.com and quote the order id.\n\nKind regards,\nEaziBots"
     # Add the message body
     email_message.attach(MIMEText(message, "plain"))
+    
+    # Attach session summary as JSON
+    summary_json = json.dumps(booking_obj.summary, indent=4)
+    attachment = MIMEApplication(summary_json.encode('utf-8'))
+    attachment['Content-Disposition'] = 'attachment; filename="session_summary.json"'
+    email_message.attach(attachment)
+
         
     # Send the email
-    server.sendmail('biokporsolomon@yahoo.co.uk', email_message["To"], email_message.as_string())
+    server.sendmail(email_message['From'], email_message["To"], email_message.as_string())
     print(f"Email sent to {email_message['To']}")
     
 
@@ -112,13 +149,13 @@ def call_back_email(session):
         server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(smtp_username, smtp_password)
-        patient_name = session['summary']['Whats your full name ?']
-        number = session['summary']['Whats your phone number ?']
-        email = session['summary']['Whats your email address ?']
-        dob = session['summary']['Date of Birth']
-        interest = session['summary']['What treatment(s) are you interested in ?']
-        enquiry = session['summary']['Describe your enquiry in your own words.']
-        preference = session['summary']['What time of day should we call ?']
+        patient_name = session['summary']['client name']
+        number = session['summary']['phone']
+        email = session['summary']['email']
+        #dob = session['summary']['date of birth']
+        interest = session['summary']['treatment category']
+        enquiry = 'test'
+        preference = 'test'
         
         email_message = MIMEMultipart()
         email_message["From"] = 'biokporsolomon@yahoo.co.uk'
@@ -126,8 +163,15 @@ def call_back_email(session):
         email_message["Subject"] = f"EaziBots Call Back Request: {patient_name}"
             
         # Create a multipart message
-        message = f"Hi {session['customer_name']},\n\nThis is confirmation of a call back request, see details below:\nPatient Name: {patient_name}\nPhone Number: {number}\nEmail: {email}\nDate of Birth: {dob}\nInterested In: {interest}\nEnquiry: {enquiry}\nPreferred Contact Time: {preference}\n.\nIf you have any questions regarding this booking reach out to us on orders@eazibots.com and quote this id {session['session_key']}\n\nKind regards,\nEaziBots"
+        message = f"Hi {session['customer_name']},\n\nThis is confirmation of a call back request, see details below:\nPatient Name: {patient_name}\nPhone Number: {number}\nEmail: {email}.\nIf you have any questions regarding this booking reach out to us on orders@eazibots.com and quote this id {session['session_key']}\n\nKind regards,\nEaziBots"
         email_message.attach(MIMEText(message, "plain"))
+        
+        # Attach session summary as JSON
+        summary_json = json.dumps(session['summary'], indent=4)
+        attachment = MIMEApplication(summary_json.encode('utf-8'))
+        attachment['Content-Disposition'] = 'attachment; filename="session_summary.json"'
+        email_message.attach(attachment)
+
         
         # Send the email
         server.sendmail('biokporsolomon@yahoo.co.uk', email_message["To"], email_message.as_string())

@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - redis
+    environment:
+        - WEBHOOK_SECRET=whsec_oNUBClYDh4XalAth8xIZQBpS6ceMMp4i
+        - OPENAI_API_KEY=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
+        - TEST_STRIPE_KEY=sk_test_51NJcbbD1RPWlDlnhXqjIuP8aAsbR3u08EO83FB2FHpfhG8nCgsUbD0fWolN5ifoptsh3ZZsKwOPHzHf1z4P1spU900V7doveLa
+        - SMTP_PASSWORD=fntqybkejdfuwida
+    volumes:
+        - ./aurora:/app
+
+  redis:
+    image: redis:6
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - /etc/nginx/conf.d/django.conf:/etc/nginx/conf.d/django.conf:ro

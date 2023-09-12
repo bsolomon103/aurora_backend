@@ -32,6 +32,7 @@ class SessionManager:
         self._session['level1'] = False
         self._session['level2'] = False
         self._session['level3'] = False
+        self._session['payment'] = False
         self._session.save()
         return self._session
 

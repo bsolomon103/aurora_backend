@@ -28,10 +28,12 @@ def is_valid_email(email):
     if not re.match(pattern, email) is not None:
         return False
     else:
-        sender_email = 'biokporsolomon@yahoo.co.uk'
-        recipient_email = email
-        smtp_server = "smtp.mail.yahoo.com"  # Replace with the appropriate SMTP server address
-        smtp_port = 587  # Replace with the appropriate SMTP port
-        username = "biokporsolomon@yahoo.co.uk"  # Replace with your SMTP server username
-        password = "fntqybkejdfuwida"  # Replace with your SMTP server password
-        return check_email_deliverability(sender_email, recipient_email, smtp_server, smtp_port, username, password)
+        return True
+
+
+
+def is_valid_treatment(msg, session):
+    treatments = session['mappings']['booking categories']
+    if msg.lower() in treatments:
+        return True
+    return False

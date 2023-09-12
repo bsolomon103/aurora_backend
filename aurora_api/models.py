@@ -6,7 +6,7 @@ from django.contrib.sessions.models import Session
 
 class Treatments(models.Model):
     customer_name = models.ForeignKey('Customer', on_delete=models.CASCADE, null=False)
-    treatment = models.CharField(max_length=200, unique=True, null=True)
+    treatment = models.CharField(max_length=200, unique=False, null=True)
     description = models.TextField(null=True)
     booking_duration = models.IntegerField(null=True)
     calendar_id = models.CharField(max_length=200, null=True)
@@ -73,12 +73,17 @@ class Booking(models.Model):
     practise_phone = models.CharField(max_length=15, null=True)
     treatment = models.CharField(max_length=250, null=True)
     summary = models.JSONField(null=True)
-    #practise_name = models.ForeignKey('Customer', on_delete=models.CASCADE, null=False)
-    #treatment = models.ForeignKey('Treatments', on_delete=models.CASCADE, null=False)
-    #email = models.CharField(max_length=200)
     booking_status = models.CharField(max_length=50, default='unpaid')
     price = models.IntegerField(default=1)
     calendar_id = models.CharField(max_length=100, default= '')
-    #phone = models.CharField(max_length=15, null=True)
     sessionid = models.CharField(max_length=100, null=True)
     booking_duration = models.IntegerField(default=15)
+    setting = models.CharField(max_length=100, null=True)
+
+
+class Payment(models.Model):
+    name = models.CharField(max_length=250, null=True)
+    amount = models.IntegerField()
+    email = models.CharField(max_length=250, null=False)
+    dob = models.DateField()
+    

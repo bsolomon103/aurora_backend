@@ -35,7 +35,7 @@ class PerformTask:
         date = list(datefinder.find_dates(self.message))
         date = date[0] if len(date) > 0 else 'No date found'
         
-        start = date - timedelta(minutes=60)
+        start = date - timedelta(minutes=10)
         return self._check_availability(start)
     
     def _check_availability(self, start):
@@ -66,7 +66,7 @@ class PerformTask:
         else:
             print('Timeslot taken')
             start = start[:-5]
-            start = list(datefinder.find_dates(start))[0] + timedelta(minutes=60)
+            start = list(datefinder.find_dates(start))[0] + timedelta(minutes=10)
             return self._check_availability(start)
             
         
@@ -191,10 +191,15 @@ def convert_utc(datetimestr, booking_duration):
     return start, end
     
 
-def create_event(timeobj, calendar_id, booking_duration, description=None, location=None):
+def create_event(patient_name,treatment, timeobj, setting, calendar_id, booking_duration, description=None, location=None):
+    setting = setting
+    name = patient_name
+    treatment = treatment
+    summary = f"{setting}: {name} for {treatment}"
+    
     start, end = convert_utc(timeobj, booking_duration)
     event = {
-        'summary': 'Test Event', # this will be the intent tag on backend
+        'summary': summary, # this will be the intent tag on backend
         'location': 'Southend On Sea', # if room booking service is available write here/default loc
         'description': description,
         'start': {
@@ -226,18 +231,8 @@ def create_event(timeobj, calendar_id, booking_duration, description=None, locat
     return None
     
 
-def check_start_assessment(text):
-    target_phrase = ['how do i schedule an appointment', "How do I book an appointment?",
-                    "how do i buy this?",
-                    "how do i book this?",
-                    "Hi i want to book this",
-                    "How do i get in touch?",
-                    "I want to book this",
-                    "can I book an appointment",
-                    "how can i book",
-                    "i want to come in for a consultation",
-                    "can i please book"
-                    ]
+def check_blank(text, session):
+    treatments = session['mappings']['booking categories']
                     
     threshold = 0.65  # Adjust the threshold as needed
 
@@ -248,14 +243,14 @@ def check_start_assessment(text):
     for i in range(len(processed_text)):
         for j in range(i + 1, len(processed_text) + 1):
             substring = processed_text[i:j]
-            for t in target_phrase:
+            for t in treatments:
                 distance = levenshtein_distance(t, substring)
-                similarity = 1 - (distance / max(len(target_phrase), len(substring)))
+                similarity = 1 - (distance / max(len(treatments), len(substring)))
                 
                 # Check if the similarity exceeds the threshold
                 if similarity >= threshold:
                     #print('Yes')
-                    return True
+                    return t
 
     return False
 
@@ -294,3 +289,11 @@ def extract_numbers(text):
                 continue  # Ignore if neither an integer nor a word-based number
     
     return numbers[0]
+
+def timenow():
+    from datetime import datetime
+    import pytz
+    london_timezone = pytz.timezone('Europe/London')
+    current_datetime_london = datetime.now(london_timezone)
+    formatted_datetime = current_datetime_london.strftime('%Y-%m-%dT%H:%M:%SZ')
+    return formatted_datetime

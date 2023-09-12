@@ -13,8 +13,8 @@ import re
 import string
 from rest_framework.response import Response
 import pickle
-from .task_utils import PerformTask, FreeSlotChecker, get_free_dates, check_start_assessment
-from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_callback
+from .task_utils import PerformTask, FreeSlotChecker, get_free_dates
+from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_payment
 
 class ModelIngredients:
     def __init__(self, origin):
@@ -63,21 +63,33 @@ class ModelIngredients:
         return self.dc['key']
         
 def get_response(msg, model, all_words, tags, session, device):
-    #print(check_start_assessment(msg.lower()))
     if session['level2'] and msg.lower() == 'yes':
-        start_assessment(msg, session)#
-    if msg.lower() in ('start','start consultation', 'start assessment') or check_start_assessment(msg.lower()):
+        print('1')
+        start_assessment(msg, session)
+    if msg.lower() in ('start'):
+        print('2')
         start_assessment(msg, session)
     if (session['booking_on']):
         response = get_response_booking(msg, session)
-        return response
-    elif(session['level3'] and msg.lower() != 'no'):
-        response = get_response_callback(msg, session)
-        return response
+        #return response
+    elif(session['level3'] and msg.lower() == 'yes'):
+        session['level2'] = False
+        response = get_response_booking(msg, session)
+        #return response
+    elif(session['level3'] and msg.lower() == 'no'):
+        session['level3'] = False
+        session['level2'] = True
+        response =  "Understood. Let me know if i can help you with anything else."
+    elif msg.lower() == 'pay' or session['payment']:
+        response = get_response_payment(msg, session)
+        #return response
     else:
         output = get_response_aurora(msg, model, all_words, tags, session, device)
         response = output['response']
-        return response
+        #add code to start booking if ai says so using gpt functions
+        #return response
+    session.save()
+    return response
     
     
 

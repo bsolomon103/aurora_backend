@@ -38,8 +38,8 @@ class CreateView(View):
     
     def post(self, request, *args, **kwargs):
         origin = request.META['HTTP_ORIGIN']
-        if origin == 'http://18.133.125.44:8080/':
-            stripe.api_key = os.environ['TEST_STRIPE_KEY']
+        #if origin == 'http://18.133.125.44:8080/':
+        stripe.api_key = os.environ['TEST_STRIPE_KEY']
         
         form = StripeForm(request.POST, request.FILES)
         if form.is_valid():
@@ -62,6 +62,7 @@ class CreateView(View):
                           )
                 
                 idx = account['id']
+                
         
                 customer_obj = Customer.objects.get(name=name)
                 qs = StripeInfo.objects.filter(customer = customer_obj)
@@ -84,6 +85,7 @@ class CreateView(View):
                                 type="account_onboarding",
                                 )
                     link = account_link['url']
+                    print(idx, stripe.api_key)
                     return redirect(link)
                 else:
                     return Response('Customer already has an account')
@@ -101,20 +103,21 @@ class CheckOutView(APIView):
     
     def post(self, request, *args, **kwargs):
         origin = request.META['HTTP_ORIGIN']
-        if origin == 'http://35.178.231.126:8080/':
-            stripe.api_key = os.environ['TEST_STRIPE_KEY']
+        #if origin == 'http://35.178.231.126:8080/':
+        stripe.api_key = os.environ['TEST_STRIPE_KEY']
             
         serializer = self.serializer_class(data=request.data) 
         if serializer.is_valid():
             key = serializer.data['session_key']
             session = SessionStore(session_key=key)
-            booking_date = session['summary']['booking_date']
+            booking_date = session['summary']['booking_date'] if 'booking_date' in session['summary'] else session['summary']['payment_date']
             patient_name = session['summary']['client name']
             patient_email = session['summary']['email']
             patient_phone = session['summary']['phone']
+            setting = session['summary']['setting']
             #Consider getting booking category from booking category instead of treatment category
             treatment = session['summary']['treatment category'].title()
-            print(treatment)
+            #print(treatment)
             #Add code here to map treatment to priceable treatments
         
             summary = session['summary']
@@ -129,7 +132,7 @@ class CheckOutView(APIView):
 
             treatment_obj = Treatments.objects.get(customer_name=practise_obj, treatment=treatment)
             practise_email = treatment_obj.calendar_id
-            booking_duration = treatment_obj.booking_duration
+            booking_duration = 0 if setting == 'payment' else treatment_obj.booking_duration
             
             
 
@@ -137,9 +140,13 @@ class CheckOutView(APIView):
             treatment_seller_obj = TreatmentSeller.objects.filter(seller_id=practise_id)
             
             for s in treatment_seller_obj:
-                if (s.product.treatment == session['booking_category'].title()):
+                if (s.product.treatment == treatment.title()):
                     product_seller_obj = s
-            price = Price.objects.get(product_seller=product_seller_obj, quantity=quantity).price * 100
+                    
+            #filter bookings & payments here
+        
+            price = (session['summary']['amount'] if 'amount' in session['summary'] else Price.objects.get(product_seller=product_seller_obj, quantity=quantity).price) * 100
+            #print(type(price))
             booking = Booking.objects.create(
                 booking_date = booking_date,
                 patient_name = patient_name,
@@ -154,10 +161,12 @@ class CheckOutView(APIView):
                 price = price/100,
                 calendar_id = calendar_id, 
                 sessionid = session_id,
-                booking_duration = booking_duration
+                booking_duration = booking_duration,
+                setting = setting
                 )
             
             
+           
             stripeinfobj = StripeInfo.objects.get(customer_id=practise_id)
             if stripeinfobj.verified == False:
                 if not check_verified(stripeinfobj.account_id):
@@ -174,7 +183,7 @@ class CheckOutView(APIView):
                         'price_data': {
                         'currency': 'gbp', #remember to change to gbp in prod.
                         'product_data': {
-                                    'name': f"{quantity} * {session['booking_category'].title()}",
+                                    'name': f"{quantity} * {treatment.title()}",
                         },
                         'unit_amount': int(price),
                         },
@@ -193,6 +202,7 @@ class CheckOutView(APIView):
                      )
                      
             data = {'checkout_url': checkoutsession.url}
+            print(stripeinfobj.account_id)
             #print(checkoutsession.id)
             return JsonResponse(data, status=200)
 
