@@ -14,7 +14,7 @@ import string
 from rest_framework.response import Response
 import pickle
 from .task_utils import PerformTask, FreeSlotChecker, get_free_dates
-from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_payment
+from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_callback
 
 class ModelIngredients:
     def __init__(self, origin):
@@ -63,34 +63,29 @@ class ModelIngredients:
         return self.dc['key']
         
 def get_response(msg, model, all_words, tags, session, device):
-    if session['level2'] and msg.lower() == 'yes':
-        print('1')
-        start_assessment(msg, session)
-    if msg.lower() in ('start'):
-        print('2')
+    if session['probe'] and msg.lower() == 'yes':
+        response = random.choices([
+            'Glad to be of service to you',
+            'Let me know if you have any more questions',
+            "I'm delighted to assist you.",
+            "Feel free to reach out if you need further help.",
+            "It's my pleasure to be of help.",
+            "Don't hesitate to ask if you require additional information.",
+            "I'm here if you have any more inquiries."
+                                    ])[0]
+        return response
+    elif (session['probe'] and msg.lower() == 'no') or session['callback']:
+        response = get_response_callback(msg, session)
+        return response
+    elif (not session['probe'] and msg.lower() == 'yes'):
         start_assessment(msg, session)
     if (session['booking_on']):
         response = get_response_booking(msg, session)
-        #return response
-    elif(session['level3'] and msg.lower() == 'yes'):
-        session['level2'] = False
-        response = get_response_booking(msg, session)
-        #return response
-    elif(session['level3'] and msg.lower() == 'no'):
-        session['level3'] = False
-        session['level2'] = True
-        response =  "Understood. Let me know if i can help you with anything else."
-    elif msg.lower() == 'pay' or session['payment']:
-        response = get_response_payment(msg, session)
-        #return response
     else:
-        output = get_response_aurora(msg, model, all_words, tags, session, device)
+        output = get_response_aurora(msg,model, all_words, tags, session, device)
         response = output['response']
-        #add code to start booking if ai says so using gpt functions
-        #return response
     session.save()
     return response
-    
     
 
 def model_builder(trainingfile):

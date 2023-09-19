@@ -1,6 +1,8 @@
 import openai 
 import os
 openai.api_key = os.environ['OPENAI_API_KEY']
+from bs4 import BeautifulSoup
+import re
 
 #openai.api_key = "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"
 #export OPENAI_API_KEY="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"
@@ -8,6 +10,27 @@ openai.api_key = os.environ['OPENAI_API_KEY']
 #export WEBHOOK_SECRET="whsec_oNUBClYDh4XalAth8xIZQBpS6ceMMp4i"
 import string
 
+
+def emailcheck(txt):
+    pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
+    matches = re.findall(pattern, txt)
+    if matches:
+        for match in matches:
+            res = txt.split(match)
+            return f"{res[0]}<a href='mailto:{match}'>email</a>{res[1]}"
+    else:
+        return txt
+
+def urlcheck(txt):
+    url = r'https?://[^\s/$.?#].[^\s]*'
+    matches = re.findall(url, txt)
+    if matches:
+        for match in matches:
+            #print(match)
+            res = txt.split(match)
+        return f"{res[0]}{match}{res[1]}"
+    else:
+        return txt
 
 def remove_punctuation(text):
     punctuation = string.punctuation
@@ -17,44 +40,27 @@ def worker_one(sessionobj):
     print('worker1')
     print(sessionobj['booking_on'])
     chat_history = sessionobj['messages']
+    #print(chat_history)
     latest_message = chat_history[-1]['content']
+    print(latest_message)
+    #available_response = sessionobj['']
     available_treatments = sessionobj['treatment_init']
     probe_question = None
     
-    if sessionobj['level1'] and latest_message.lower() == 'no':
-        response = "Would you like to complete a pre-appointment questionnaire to assess your suitability and eligibility for this treatment? (Y/N)"
-        #f"Would you like to speak to one of our qualified experts to discuss your specific needs? (Y/N)"
-        chat_history.append({'role':'user','content': response})
-        sessionobj['level1'] = False
-        sessionobj['level2'] = True
-        return response 
-    
-    elif sessionobj['level1'] and latest_message.lower() == 'yes':
-        latest_message += latest_message + 'i have another question'
-        chat_history.append({'role':'user','content': latest_message})
 
-    elif sessionobj['level2'] and latest_message.lower() == 'no':
-        response = f"I can arrange a call back, if you'd prefer to speak with one of our qualified professionals instead. (Y/N)"
-        sessionobj['level2'] = False
-        sessionobj['level3'] = True
-        return response 
-    
+
     response = openai.ChatCompletion.create(
-            model = "gpt-3.5-turbo",
+            model = "gpt-4",
             messages = [
-                {'role': 'system', 'content': f"You are a helpful assistant at a UK dentist practice which offers these treatments {available_treatments} your name is Aurora and always responds with 40 words or less. You answer users questions about dental treatments, cost etc all references to 'dentist' should be 'us' or 'we' instead. Your main goal is to ensure the users question has been answered satisfactorily. Don't ask any follow up questions. Limit your responses to 50 words max and never ever ask the user if they would like to schedule or book an appointment."}
-            ] + chat_history)
+                {'role': 'system', 'content': f"You are a helpful assistant working for Southend City Council local authority and your name is Aurora and always responds with 40 words or less."}
+            ] + chat_history,
+            temperature=0.2)
     response = response['choices'][0]['message']['content']
-    #First ask
-    if len(chat_history) >= 3 and not latest_message.lower().__contains__('yes') and not response.__contains__('below') and not response.__contains__('?'):
-        probe_question = f"<br/><br/>Do you have any other questions? (Y/N)"
-        sessionobj['level1'] = True
+    response = latest_message if response == '' else response
     
     chat_history.append({'role':'assistant','content': response})
     sessionobj['messages'] = chat_history
-    
-    if probe_question:
-        response = response + probe_question
+
     sessionobj.save()
     #print(response)
     return response
@@ -103,30 +109,83 @@ def worker_four(msg):
     response = response['choices'][0]['message']['content']
     return response
     
-    
+
+
+
+
 '''
-def worker_four(msg):
-    whitening_treatments = ['teeth whitening', 'hygienist services']
+def convert_html_to_links(text):
+    soup = BeautifulSoup(text, 'html.parser')
+    for a in soup.find_all('a'):
+        link_text = a.get_text()
+        href = a['href']
+        link = f"<a href='{href}' target='_blank'>{link_text}</a>"
+        text = text.replace(str(a), link)
+    return text
+    
+    
+
+
+def worker_one(sessionobj):
+    print('worker1')
+    print(sessionobj['booking_on'])
+    chat_history = sessionobj['messages']
+    latest_message = chat_history[-1]['content']
+    available_treatments = sessionobj['treatment_init']
+    probe_question = None
+    
+
+    
     response = openai.ChatCompletion.create(
             model = "gpt-3.5-turbo",
-            messages = [{'role': 'system', 'content': f"You are a helpful assistant that works for a dentist practise. Your job is to decide on the best treatment for a patients discolored teeth based on logs of their conversation {msg} cross referenced with avaialable treatment {whitening_treatments}.  All responses should provide a reason why the proposed treatment is being suggested and limited to 35 words max."},
-                        {'role': 'user', 'content': msg}])
-   
+            messages = [
+                {'role': 'system', 'content': f"You are a helpful assistant at a UK local authority which offers these services {available_treatments} your name is Aurora and always responds with 40 words or less. You answer users questions about services, costs etc. Your main goal is to ensure the users question has been answered satisfactorily. Don't ask any follow up questions. Limit your responses to 40 words max and never ever ask the user if they would like to schedule or book an appointment. If the response contains URL ensure these are clickable links"}
+            ] + chat_history)
+            
     response = response['choices'][0]['message']['content']
+   
+
+    #response = "You can visit the <b><a href='https://livewellsouthend.com/kb5/southendonsea/directory/advice.page?id=6EVktPY9muo' target='_blank'>Livewell Southend Website</a></b> for more information."
+
+    #response = convert_html_to_links(response)
+    
+
+    
+    #response = convert_html_to_links(response)
+    #First ask
+    
+    if len(chat_history) >= 3 and not latest_message.lower().__contains__('yes') and not response.__contains__('below') and not response.__contains__('?'):
+        probe_question = f"<br/><br/>Do you have any other questions? (Y/N)"
+        sessionobj['level1'] = True
+
+    
+    chat_history.append({'role':'assistant','content': response})
+    sessionobj['messages'] = chat_history
+    
+    if probe_question:
+        response = response + probe_question
+    sessionobj.save()
+    #print(response)
+    return response
+
+
+
+def worker_two(sessionobj, mappings):
+    print('worker2')
+    category = mappings['booking categories']
+    chat_history = sessionobj['messages']
+    services = sessionobj['treatment_init']
+    response = openai.ChatCompletion.create(
+            model = "gpt-4",
+            messages = [{'role': 'system', 'content': f"You are a helpful assistant that works for a local authority in the uk. Using this {chat_history} match users to a service category for a virtual booking. This is the list of services here {category}, return only one of these. Your response should be the category name only. All your responses should follow the format category: your chosen category."}]
+            )
+    response = response['choices'][0]['message']['content'].lower()
+    print(response)
+    print(sessionobj['booking_on'])
+    sessionobj['messages'] = chat_history
     if response.__contains__(':'):
         response = response.split(':')[1]
-    print(response)
+    chat_history.append({'role':'assistant','content': response.strip()})
     return response.strip()
-    
- 
-            messages = [
-                {'role': 'system', 'content': f"You are a helpful assistant at a UK dentist practice. We respond within 25 words. If the user enquires about booking without specifying treatment, ask if they want a check-up or other treatment."},
-                {'role': 'system', 'content': f"Please mention the specific dental treatment you want to book. For example, 'I want to book a cleaning appointment.' Type 'start consultation' for detailed info on a specific treatment, only after choosing one."},
-                {'role': 'system', 'content': f"Our practice hours are XX:XX AM/PM to XX:XX AM/PM, Monday to Friday. Let us know how we can assist you."},
-                {'role': 'system', 'content': f"If the user wants to sign up (reigister) with your dental practice, then tell them to please type 'start consultation' to begin the registration process."},
-            ]
-            + chat_history
-            )
 '''
-    
-    
+

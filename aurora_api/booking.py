@@ -80,7 +80,6 @@ def send_to_user(booking_obj, server):
         prefix = 'In person appointment confirmation for '
         datevar = "Appointment Date"
         timevar = "Appointment Time"
-    
     else:
         prefix = 'Call back confirmation for '
         datevar = "Call Back Date"
