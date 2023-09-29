@@ -9,6 +9,7 @@ import time
 from .booking import call_back_email, send_email
 from .models import Treatments, Customer, Booking
 from .emailcheck import is_valid_treatment
+from .questions import questionsdc
 
 def start_assessment(msg, session):
     session['booking_on'] = True
@@ -34,7 +35,8 @@ def get_response_booking(msg, session):
         #print(category)
         session['booking_category'] = category
         session['summary']['treatment category'] = category
-        questions = session['booking_questions']['booking questions'][category][0]
+        #questions = session['booking_questions']['booking questions'][category][0] # this is where the change can be made !!!
+        questions = questionsdc['booking questions'][category][0]
         session['questions'] = questions
         session['question_keys'] += list(questions.keys())
         count = session['count']
@@ -104,7 +106,7 @@ def get_response_aurora(msg, model, all_words, tags, session, device):
             if tag == intent['tag']:
                 response =  random.choices(intent['responses'])[0]
                 session['messages'].append({'role':'assistant','content': response})
-                response = response if tag in no_probe else f"{response} <br/><br/>Have I been helpful? (Y/N)"
+                response = response if tag in no_probe else f"{response} <br/><br/><div style='display:flex; justify-content:center;'>Have I been helpful? (Y/N)</div>"
 
     elif prob.item() < 0.9:
         response = worker_one(session)

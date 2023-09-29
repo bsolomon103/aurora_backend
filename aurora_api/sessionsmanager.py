@@ -6,6 +6,7 @@ from django.contrib.sessions.models import Session
 from cryptography.fernet import Fernet
 import base64
 from .task_utils import PerformTask, FreeSlotChecker, get_free_dates
+import json
 
 class SessionManager:
     def __init__(self, origin):
@@ -17,7 +18,8 @@ class SessionManager:
         self._session.create()
         seasoning = ModelIngredients(self.origin).extract_data()
         for k in self.keys:
-            self._session[k] = seasoning[k]
+                self._session[k] = seasoning[k]
+                
         self._session['input_tag'] = None  
         #self._session['questionasked'] = None 
         self._session['booking_on'] = False
