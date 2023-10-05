@@ -1,8 +1,10 @@
 from django.contrib import admin
-from .models import Models, Customer, AppCredentials, Treatments, Price, TreatmentSeller, Booking
+from .models import Models, Customer, AppCredentials, Treatments, Price, TreatmentSeller, Booking, Chat
 
 
-
+class ChatAdmin(admin.ModelAdmin):
+    list_display = ['id', 'session_id', 'message', 'response', 'rating']
+    
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ['name']
 
@@ -32,4 +34,4 @@ admin.site.register(Treatments, TreatmentAdmin)
 admin.site.register(Price, PriceAdmin)
 admin.site.register(TreatmentSeller, TreatmentSellerAdmin)
 admin.site.register(Booking, BookingAdmin)
-
+admin.site.register(Chat, ChatAdmin)

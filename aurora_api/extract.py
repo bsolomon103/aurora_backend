@@ -1,5 +1,5 @@
 import os
-from .models import Models, Customer, AppCredentials
+from .models import Models, Customer, AppCredentials, Chat
 import torch
 import json
 from .prediction_model import NeuralNet
@@ -73,10 +73,21 @@ def get_response(msg, model, all_words, tags, session, device):
             "Don't hesitate to ask if you require additional information.",
             "I'm here if you have any more inquiries."
                                     ])[0]
+        chat_id = session['chat_id']
+        update_yes = Chat.objects.get(id=chat_id)
+        update_yes.rating = 'yes'
+        update_yes.save()
         return response
     elif (session['probe'] and msg.lower() == 'no') or session['callback']:
+        #Update chat object here
+        #Wipe chat value from session
         response = get_response_callback(msg, session)
+        chat_id = session['chat_id']
+        update_no = Chat.objects.get(id=chat_id)
+        update_no.rating = 'no'
+        update_no.save()
         return response
+        
     elif (not session['probe'] and msg.lower() == 'yes'):
         start_assessment(msg, session)
     if (session['booking_on']):
@@ -84,7 +95,17 @@ def get_response(msg, model, all_words, tags, session, device):
     else:
         output = get_response_aurora(msg,model, all_words, tags, session, device)
         response = output['response']
-    session.save()
+    #Create chat object.
+    #Create chat value in session
+    #response = 'list of dates' if type(response) is list else response
+    if type(response) is list:
+        placeholder = 'list of dates'
+        chat = Chat.objects.create(session_id=session['session_key'],message=msg,response=placeholder)
+    else:
+        chat = Chat.objects.create(session_id=session['session_key'],message=msg,response=response)
+    chat.save()
+    session['chat_id'] = chat.id
+    session.save() 
     return response
     
 

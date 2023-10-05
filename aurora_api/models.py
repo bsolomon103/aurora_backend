@@ -86,4 +86,11 @@ class Payment(models.Model):
     amount = models.IntegerField()
     email = models.CharField(max_length=250, null=False)
     dob = models.DateField()
+
+
+class Chat(models.Model):
+   session_id = models.CharField(max_length=50)
+   message = models.TextField(max_length=250)
+   response = models.TextField(max_length=250)
+   rating = models.CharField(max_length=5, null=True)
     

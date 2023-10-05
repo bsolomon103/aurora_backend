@@ -209,15 +209,18 @@ class CheckOutView(APIView):
 class PaymentCompleteAPI(APIView):
     def post(self, request, *args, **kwargs):
         stripe.api_key = os.environ['TEST_STRIPE_KEY'] #change to live keys
-            
-        event = None
+        
         payload = request.body
+
+        event = None
         endpoint_secret = os.environ['WEBHOOK_SECRET']
-        sig_header = request.headers['STRIPE_SIGNATURE']
+        print(endpoint_secret)
+        sig_header = request.META['HTTP_STRIPE_SIGNATURE']
+        print(sig_header)
         
         try:
             event = stripe.Webhook.construct_event(
-            payload, sig_header, endpoint_secret)
+            request.body, sig_header, endpoint_secret)
             #print(event)
         except ValueError as e:
             #invalid payload

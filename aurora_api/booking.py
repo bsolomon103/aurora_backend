@@ -81,15 +81,15 @@ def send_to_user(booking_obj, server):
         datevar = "Appointment Date"
         timevar = "Appointment Time"
     else:
-        prefix = 'Call back confirmation for '
-        datevar = "Call Back Date"
-        timevar = "Call Back Time"
+        prefix = 'Appointment confirmation for '
+        datevar = "Appointment Date"
+        timevar = "Appointment Time"
         
     email_message["Subject"] = f"{prefix}{booking_obj.treatment} with {booking_obj.practise_name}"
     date = booking_obj.booking_date.split('T')[0]
     time = booking_obj.booking_date.split('T')[1].split('+')[0]
     
-    message = f"Hi {booking_obj.patient_name.split()[0]},\n\nThis is a confirmation email, see below for full details.\n\nTreatment: {booking_obj.treatment}\nPractise Name: {booking_obj.practise_name}\n{datevar} {date}\n{timevar} {time}\nAmount Paid: {booking_obj.price}\n\nIf you have any questions feel free to reach out to {booking_obj.practise_name}\nEmail: {booking_obj.practise_email}\nPhone: {booking_obj.practise_phone}\nKind Regards,\nEaziBots"
+    message = f"Hi {booking_obj.patient_name.split()[0]},\n\nThis is a confirmation email, see below for full details.\n\nService: {booking_obj.treatment}\nOrganisation Name: {booking_obj.practise_name}\n{datevar} {date}\n{timevar} {time}\nAmount Paid: {booking_obj.price}\n\nIf you have any questions feel free to reach out to {booking_obj.practise_name}\nEmail: {booking_obj.practise_email}\nPhone: {booking_obj.practise_phone}\nKind Regards,\nEaziBots"
     # Add the message body
     email_message.attach(MIMEText(message, "plain"))
     
@@ -112,14 +112,14 @@ def send_to_practise(booking_obj, server):
         datevar = "Appointment Date"
         timevar = "Appointment Time"
     else:
-        prefix = 'Call back confirmation for '
-        datevar = "Call Back Date"
-        timevar = "Call Back Time"
+        prefix = 'Appointment confirmation for '
+        datevar = "Appointment Date"
+        timevar = "Appointment Time"
     email_message["Subject"] = f"{prefix}{booking_obj.patient_name} for {booking_obj.treatment}"
     date = booking_obj.booking_date.split('T')[0]
     time = booking_obj.booking_date.split('T')[1].split('+')[0]
 
-    message = f"Hi {booking_obj.practise_name},\n\nThis is a confirmation email, see below for full details.\n\nTreatment: {booking_obj.treatment}\nPatient Name: {booking_obj.patient_name}\nOrder ID: {booking_obj.id}\n{datevar} {date}\n{timevar} {time}\nEmail: {booking_obj.patient_email}\nPhone Number: {booking_obj.patient_phone}\nAmount Paid: {booking_obj.price}.\nIf you have any questions regarding this booking reach out to us on solomon@eazibots.com and quote the order id.\n\nKind regards,\nEaziBots"
+    message = f"Hi {booking_obj.practise_name},\n\nThis is a confirmation email, see below for full details.\n\nService: {booking_obj.treatment}\nBooking Name: {booking_obj.patient_name}\nOrder ID: {booking_obj.id}\n{datevar} {date}\n{timevar} {time}\nEmail: {booking_obj.patient_email}\nPhone Number: {booking_obj.patient_phone}\nAmount Paid: {booking_obj.price}.\nIf you have any questions regarding this booking reach out to us on solomon@eazibots.com and quote the order id.\n\nKind regards,\nEaziBots"
     # Add the message body
     email_message.attach(MIMEText(message, "plain"))
     
