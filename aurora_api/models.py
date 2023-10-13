@@ -1,7 +1,10 @@
 from django.db import models
 from django.conf import settings
 import os
+import boto3
 from django.contrib.sessions.models import Session
+from django.forms.models import model_to_dict
+#from .custom_fields import S3FileField
 
 
 class Treatments(models.Model):
@@ -44,15 +47,15 @@ class Price(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.CharField(max_length=250, null=True)
 
+'''
 class Models(models.Model):
     customer_name = models.ForeignKey('Customer', on_delete=models.CASCADE, null=False)
     intent = models.JSONField(null=False)
     training_file = models.FileField(upload_to='training_file', null=True, unique=True)
     model_key = models.CharField(max_length=200, unique=True, null=True)
+'''
 
-class AppCredentials(models.Model):
-    google_secret = models.FileField(upload_to='secrets_file', null=True, unique=True)
-    platform = models.CharField(max_length=250, null=True)
+
     
 class Image(models.Model):
     name = models.CharField(max_length=250)
@@ -94,3 +97,51 @@ class Chat(models.Model):
    response = models.TextField(max_length=250)
    rating = models.CharField(max_length=5, null=True)
     
+
+#Extend filefield attribute to upload to S3
+
+class S3FileField(models.FileField):
+    def generate_filename(self, instance, filename):
+        #Use customer name to create filename
+        if filename:
+            ext = os.path.splitext(filename)[1]
+            attributes = model_to_dict(instance)
+            if 'customer_name' in attributes:
+                filename = f"{instance.customer_name}{ext}"
+            if 'platform' in attributes:
+                filename = f"{instance.platform}{ext}"
+            print(filename)
+            return filename
+        else:
+            return 'southend council.pth'
+
+    def upload_to(self, instance, filename):
+        x = f"{os.environ['AWS_STORAGE_BUCKET_NAME']}/{self.generate_filename(instance, filename)}"
+        print(x)
+        return x
+
+    def get_s3_url(self, instance, filename):
+        s3 = boto3.client('s3', region_name='eu-west-2')
+        #s3_filename = self.upload_to(instance, filename)
+        url = s3.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': os.environ['AWS_STORAGE_BUCKET_NAME'], 
+                    'Key': filename},
+            ExpiresIn=3600  # URL expiration time in seconds
+        )
+        return url
+        
+        
+
+#Use custom S3FileField in Models object
+class Models(models.Model):
+    customer_name = models.ForeignKey('Customer', on_delete=models.CASCADE, null=False)
+    intent = models.JSONField(null=False)
+    training_file = S3FileField(upload_to='upload_to', null=True, unique=True)
+    model_key = models.CharField(max_length=200, unique=True, null=True)
+
+class AppCredentials(models.Model):
+    google_secret = S3FileField(upload_to='upload_to', null=True, unique=True)
+    platform = models.CharField(max_length=250, null=True)
+    
+ 

@@ -221,4 +221,10 @@ CACHES = {
 
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024  # 20MB or the same value as Nginx configuration
-
+#AWS_DEFAULT_ACL = 'public-read'  # Set the desired ACL for uploaded files
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+AWS_S3_ADDRESSING_STYLE = "virtual"
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+#AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')

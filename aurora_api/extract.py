@@ -1,20 +1,20 @@
 import os
-from .models import Models, Customer, AppCredentials, Chat
+import boto3
 import torch
 import json
-from .prediction_model import NeuralNet
-from .nltk_utils import bag_of_words, tokenize
 import random
 import time
 import openai 
-openai.api_key = "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"
-from .openaiworkers import worker_one, worker_two
 import re
 import string
 from rest_framework.response import Response
 import pickle
+from django.conf import settings
+from .models import Models, Customer, AppCredentials, Chat
+from .prediction_model import NeuralNet
+from .nltk_utils import bag_of_words, tokenize
 from .task_utils import PerformTask, FreeSlotChecker, get_free_dates
-from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_callback
+from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_callback, download_file_from_s3
 
 class ModelIngredients:
     def __init__(self, origin):
@@ -108,7 +108,38 @@ def get_response(msg, model, all_words, tags, session, device):
     session.save() 
     return response
     
+    
+def model_builder(trainingfile):
+    dc = {}
 
+    # Specify the local file path where you expect the training file to be
+    local_trainingfile = os.path.join(settings.BASE_DIR, 'media', 'training_file', os.path.basename(trainingfile))
+
+    # Check if the local file exists
+    if os.path.exists(local_trainingfile):
+        data = torch.load(local_trainingfile, map_location=torch.device('cpu'))
+        model = NeuralNet(data['input_size'], data['hidden_size'], data['output_size']).to(torch.device('cpu'))
+        model.load_state_dict(data['model_state'])
+        model.eval()
+        dc['tags'] = data['tags']
+        dc['all_words'] = data['all_words']
+        dc['model'] = model
+    else:
+        # The local file doesn't exist, download it from S3
+        local_trainingfile = download_file_from_s3('training_file', trainingfile)
+        if local_trainingfile:
+            data = torch.load(local_trainingfile, map_location=torch.device('cpu'))
+            model = NeuralNet(data['input_size'], data['hidden_size'], data['output_size']).to(torch.device('cpu'))
+            model.load_state_dict(data['model_state'])
+            model.eval()
+            dc['tags'] = data['tags']
+            dc['all_words'] = data['all_words']
+            dc['model'] = model
+
+    return dc
+    
+
+'''
 def model_builder(trainingfile):
     dc = {}
     data = torch.load(trainingfile, map_location=torch.device('cpu'))
@@ -119,3 +150,21 @@ def model_builder(trainingfile):
     dc['all_words'] = data['all_words']
     dc['model'] = model
     return dc
+
+
+
+
+def download_trainingfile_from_s3(file_reference):
+    s3 = boto3.client('s3')
+    bucket_name = os.environ['AWS_STORAGE_BUCKET_NAME']
+    directory = os.path.join(settings.BASE_DIR, 'media')  # Local file path where you want to save the downloaded file
+    file_path = os.path.join(directory, 'training_file', file_reference)
+    
+    try:
+        s3.download_file(bucket_name, file_reference, file_path)
+        return file_path
+    except Exception as e:
+        # Handle exceptions (e.g., file not found in S3, permissions issues, etc.)
+        print(f"Error: {e}")
+        return None
+'''

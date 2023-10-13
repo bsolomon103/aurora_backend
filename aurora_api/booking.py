@@ -182,4 +182,3 @@ def call_back_email(session):
     finally:
         server.quit()
     return
-

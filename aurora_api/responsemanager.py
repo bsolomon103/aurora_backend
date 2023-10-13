@@ -4,12 +4,44 @@ from .prediction_model import NeuralNet
 from .nltk_utils import bag_of_words, tokenize
 import torch
 import random
+import boto3
+import os
 from .emailcheck import is_valid_email
 import time
+from django.conf import settings
 from .booking import call_back_email, send_email
 from .models import Treatments, Customer, Booking
 from .emailcheck import is_valid_treatment
 from .questions import questionsdc
+
+def download_file_from_s3(local_directory, file_reference):
+    s3 = boto3.client('s3')
+    bucket_name = os.environ['AWS_STORAGE_BUCKET_NAME']
+    directory = os.path.join(settings.BASE_DIR, 'media')  # Local file path where you want to save the downloaded file
+    file_path = os.path.join(directory, local_directory, file_reference)
+    print(file_path)
+    
+    try:
+        s3.download_file(bucket_name, file_reference, file_path)
+        return file_path
+    except Exception as e:
+        # Handle exceptions (e.g., file not found in S3, permissions issues, etc.)
+        print(f"Error: {e}")
+        return None
+
+def get_or_download_secret(secret_file):
+     # Specify the local file path where you expect the training file to be
+    local_file = os.path.join(settings.BASE_DIR, 'media', 'secrets_file', secret_file)
+
+    # Check if the local file exists
+    if os.path.exists(local_file):
+        return local_file
+     
+    else:
+        # The local file doesn't exist, download it from S3
+        local_trainingfile = download_file_from_s3('secrets_file', secret_file)
+        if local_trainingfile:
+            return local_file
 
 def start_assessment(msg, session):
     session['booking_on'] = True
@@ -23,7 +55,9 @@ def get_response_dates(msg, session):
     treatment_obj = Treatments.objects.get(customer_name=practise_obj, treatment=treatment_required.title())
     booking_duration = treatment_obj.booking_duration 
     calendar_id = treatment_obj.calendar_id
-    dates = get_free_dates(session['secret'], calendar_id, booking_duration)
+    secret = get_or_download_secret('Google.json')
+    print(secret)
+    dates = get_free_dates(secret, calendar_id, booking_duration)
     response = dates
     session.save()
     return response
@@ -134,5 +168,3 @@ def get_response_callback(msg, session):
     session['count'] = count
     session.save()
     return response
-
-        

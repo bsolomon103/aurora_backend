@@ -178,7 +178,7 @@ class FreeSlotChecker:
         return brit_slots
 
 def get_free_dates(client_secret_file, calendar_id, booking_duration):
-    client_secret_file = os.path.abspath('media/'+ client_secret_file)
+    #client_secret_file = os.path.abspath('media/'+ client_secret_file)
     credentials = Credentials.from_service_account_file(client_secret_file,scopes=scopes)
     x = FreeSlotChecker(credentials, calendar_id, booking_duration).convert_brtz()
     return x

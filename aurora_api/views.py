@@ -107,7 +107,7 @@ class ModelResponseAPI(APIView):
     def post(self, request, *args, **kwargs):
     #print('here')
         origin = request.META['HTTP_ORIGIN']
-        #origin  = 'http://18.130.55.240:8080'
+        #origin  = 'https://262e5fa0c08646e6871bedd3d249507d.vfs.cloud9.eu-west-2.amazonaws.com'
         serializer = self.serializer_class(data=request.data) 
         
         if serializer.is_valid():
@@ -124,7 +124,7 @@ class ModelResponseAPI(APIView):
         else:
             session = SessionStore(session_key=key)
         
-        payload = model_builder(os.path.join(settings.MEDIA_ROOT, session['file']))  
+        payload = model_builder(session['file'])  
         try: 
             output = get_response(msg,
             payload['model'], 
