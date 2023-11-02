@@ -1,4 +1,6 @@
 import os
+from .celeryfuncs import cache_chat_message
+#from .tasks import batch_write_to_db
 import boto3
 import torch
 import json
@@ -15,6 +17,7 @@ from .prediction_model import NeuralNet
 from .nltk_utils import bag_of_words, tokenize
 from .task_utils import PerformTask, FreeSlotChecker, get_free_dates
 from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_callback, download_file_from_s3
+
 
 class ModelIngredients:
     def __init__(self, origin):
@@ -61,50 +64,38 @@ class ModelIngredients:
     
     def __get__item__(self, key):
         return self.dc['key']
-        
+    
 def get_response(msg, model, all_words, tags, session, device):
+    response =""
+    
     if session['probe'] and msg.lower() == 'yes':
-        response = random.choices([
-            'Glad to be of service to you',
-            'Let me know if you have any more questions',
-            "I'm delighted to assist you.",
-            "Feel free to reach out if you need further help.",
-            "It's my pleasure to be of help.",
-            "Don't hesitate to ask if you require additional information.",
-            "I'm here if you have any more inquiries."
+        response = random.choices(['Glad to be of service to you','Let me know if you have any more questions',
+                                    "I'm delighted to assist you.","Feel free to reach out if you need further help.",
+                                    "It's my pleasure to be of help.","Don't hesitate to ask if you require additional information.",
+                                    "I'm here if you have any more inquiries."
                                     ])[0]
-        chat_id = session['chat_id']
-        update_yes = Chat.objects.get(id=chat_id)
-        update_yes.rating = 'yes'
-        update_yes.save()
+                                    
+        #Store the chat message in Redis
+        cache_chat_message(session['session_key'], msg, response,session['rating'],session['intent'])
+        session.save()
         return response
     elif (session['probe'] and msg.lower() == 'no') or session['callback']:
-        #Update chat object here
-        #Wipe chat value from session
         response = get_response_callback(msg, session)
-        chat_id = session['chat_id']
-        update_no = Chat.objects.get(id=chat_id)
-        update_no.rating = 'no'
-        update_no.save()
+        #cache_chat_message(session['session_key'], msg, response)
         return response
         
     elif (not session['probe'] and msg.lower() == 'yes'):
         start_assessment(msg, session)
     if (session['booking_on']):
         response = get_response_booking(msg, session)
+        #cache_chat_message(session['session_key'], msg, session['rating'],response)
     else:
         output = get_response_aurora(msg,model, all_words, tags, session, device)
         response = output['response']
-    #Create chat object.
-    #Create chat value in session
-    #response = 'list of dates' if type(response) is list else response
+        #cache_chat_message(session['session_key'], msg, response)
     if type(response) is list:
         placeholder = 'list of dates'
-        chat = Chat.objects.create(session_id=session['session_key'],message=msg,response=placeholder)
-    else:
-        chat = Chat.objects.create(session_id=session['session_key'],message=msg,response=response)
-    chat.save()
-    session['chat_id'] = chat.id
+        cache_chat_message(session['session_key'],msg, session['rating'], placeholder, session['intent'])
     session.save() 
     return response
     
@@ -137,34 +128,3 @@ def model_builder(trainingfile):
             dc['model'] = model
 
     return dc
-    
-
-'''
-def model_builder(trainingfile):
-    dc = {}
-    data = torch.load(trainingfile, map_location=torch.device('cpu'))
-    model = NeuralNet(data['input_size'], data['hidden_size'], data['output_size']).to(torch.device('cpu'))
-    model.load_state_dict(data['model_state'])
-    model.eval()
-    dc['tags'] = data['tags']
-    dc['all_words'] = data['all_words']
-    dc['model'] = model
-    return dc
-
-
-
-
-def download_trainingfile_from_s3(file_reference):
-    s3 = boto3.client('s3')
-    bucket_name = os.environ['AWS_STORAGE_BUCKET_NAME']
-    directory = os.path.join(settings.BASE_DIR, 'media')  # Local file path where you want to save the downloaded file
-    file_path = os.path.join(directory, 'training_file', file_reference)
-    
-    try:
-        s3.download_file(bucket_name, file_reference, file_path)
-        return file_path
-    except Exception as e:
-        # Handle exceptions (e.g., file not found in S3, permissions issues, etc.)
-        print(f"Error: {e}")
-        return None
-'''

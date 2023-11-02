@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'aurora_api',
+    'django_celery_results',
+    'django_celery_beat',
     'stripeaccounts',
     'rest_framework',
     'crispy_forms',
@@ -228,3 +230,16 @@ AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 #AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
+
+#CELERY_SETTINGS
+CELERY_BROKER_URL = 'redis://:Aurora24@172.31.40.69:6379/1'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+#CELERY_TIMEZONE = 'Europe/London'
+CELERY_RESULT_BACKEND = 'django-db'
+
+
+#CELERY BEAT
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+

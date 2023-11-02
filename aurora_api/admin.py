@@ -3,7 +3,7 @@ from .models import Models, Customer, AppCredentials, Treatments, Price, Treatme
 
 
 class ChatAdmin(admin.ModelAdmin):
-    list_display = ['id', 'session_id', 'message', 'response', 'rating']
+    list_display = ['id', 'session_id', 'message', 'response', 'rating', 'intent']
     
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ['name']

@@ -1,4 +1,5 @@
 from .extract import ModelIngredients
+from django.utils import timezone
 from .models import AppCredentials, Customer
 from .task_utils import PerformTask
 from django.contrib.sessions.backends.db import SessionStore
@@ -31,11 +32,7 @@ class SessionManager:
         self._session['consultation_summary'] = []
         self._session['question_asked'] = None
         self._session['question_keys'] = []
-        #self._session['no_sale'] = False
-        #self._session['level1'] = False
-        #self._session['level2'] = False
-        #self._session['level3'] = False
-        #self._session['payment'] = False
+        self._session['rating'] = 'Yes'
         self._session['probe'] = False
         self._session['callback'] = False
         self._session.save()

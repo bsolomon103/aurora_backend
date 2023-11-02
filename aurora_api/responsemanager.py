@@ -2,6 +2,7 @@ from .task_utils import get_free_dates, extract_numbers, create_event, timenow
 from .openaiworkers import worker_one, worker_two
 from .prediction_model import NeuralNet
 from .nltk_utils import bag_of_words, tokenize
+from .celeryfuncs import cache_chat_message
 import torch
 import random
 import boto3
@@ -94,7 +95,9 @@ def get_response_booking(msg, session):
                 session['summary'][prev_key] = str(extract_numbers(msg))
             if prev_key.lower() == 'email':
                 if not (is_valid_email(msg)):
-                    return "Please provide a valid email address!!"
+                    response =  "Please provide a valid email address!!"
+                    cache_chat_message(session['session_key'], msg, response, session['rating'], session['intent'])
+                    return response
             elif (session['summary']['treatment category'].lower() not in ('generic toothache') and count == len(session['question_keys']) - 1):
                 response = f"Thanks {session['summary']['client name'].split()[0]},<br/><br/>{response}"
             count += 1
@@ -106,17 +109,17 @@ def get_response_booking(msg, session):
                 session['summary'][session['question_keys'][count-1]] = msg
                 response = get_response_dates(msg, session)
                 session.save()
+                #cache_chat_message(session['session_key'], msg, response, session['rating'], session['intent'])
                 return response
         elif (count == len(session['question_keys']) and msg.lower() == 'no'):
             response = 'No probs'
-
-        
         else:   
             session['summary']['booking_date'] = msg
             session['summary']['customer_name'] = session['customer_name']
             response = f"Thank you {session['summary']['client name'].split()[0]} for the info you've provided.<br/><br/> Please click the checkout button below to complete your booking and an email confirmation will be sent to you shortly."
     session['messages'].append({'role':'assistant', 'content': response})
     session.save()
+    cache_chat_message(session['session_key'], msg, response, session['rating'], session['intent'])
     return response
 
 def get_response_aurora(msg, model, all_words, tags, session, device):
@@ -134,6 +137,7 @@ def get_response_aurora(msg, model, all_words, tags, session, device):
     prob = probs[0][predicted.item()]
     dc = {}
     dc['input_tag'] = tag
+    session['intent'] = tag
     print(tag, prob.item())
     if prob.item() >= 0.9:
         for intent in intents['intents']: 
@@ -143,28 +147,33 @@ def get_response_aurora(msg, model, all_words, tags, session, device):
                 response = response if tag in no_probe else f"{response} <br/><br/><div style='display:flex; justify-content:center;'>Have I been helpful? (Y/N)</div>"
 
     elif prob.item() < 0.9:
-        response = worker_one(session)
+        #response = worker_one(session)
+        response = get_response_callback(msg, session)
     session['probe'] = False if tag in no_probe else True
     #print(session['probe'])
     dc['response'] = response
     session.save()
+    cache_chat_message(session['session_key'], msg, response, None, session['intent'])
     return dc
   
         
 
 def get_response_callback(msg, session):
     session['callback'] = True
+    session['rating'] = 'No'
     key = ['input', 'output', 'rating']
-    value = ['Im sorry I didnt help you on this occassion. Your feedback will help me learn faster.<br/><br/> Firstly, what was the nature of your request?',
+    value = ['Im sorry I cant answer your query with a high degree of confidence yet, i am constanly learning and improving. Your feedback will help me learn faster.<br/><br/> Firstly, what was the nature of your request?',
             'How was my response inadequate?', 'Rate your experience out of 5, with 1 - poor and 5 - good']
     
     count = session['count']
     if count < len(value):
         response = value[count]
+        cache_chat_message(session['session_key'], msg, response, session['rating'], session['intent'])
         count += 1
     else:
         session['callback'] = False
         response = 'Thanks for your valuable feedback. This information will be used to make me better.'
+        cache_chat_message(session['session_key'], msg, response,session['rating'],session['intent'])
     session['count'] = count
     session.save()
     return response

@@ -34,17 +34,12 @@ from django.contrib.sessions.backends.db import SessionStore
 from django.core.signing import Signer
 import base64
 from cryptography.fernet import Fernet
-
-
+from .tasks import test_func
 
 class TestAPIView(GenericAPIView):
     def get(self, request):
-        if "counter" in request.session and "counter" == 5:
-            request.session["counter"] += 1
-            return 
-        else:
-            request.session["counter"] = 1
-        return HttpResponse(f"Counter: {request.session['counter']}")
+        test_func.delay()
+        return HttpResponse('Done')
 
 
 class ModelTrainingView(View):
@@ -118,10 +113,13 @@ class ModelResponseAPI(APIView):
         
         if key == '':
             session = SessionManager(origin).create_session()
+            
             key = session.session_key
             session['session_key'] = key
+            #Create custom session here
  
         else:
+            #Pull from custom session here
             session = SessionStore(session_key=key)
         
         payload = model_builder(session['file'])  

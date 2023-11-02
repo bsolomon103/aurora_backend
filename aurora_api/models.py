@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 import os
 import boto3
 from django.contrib.sessions.models import Session
@@ -96,10 +97,10 @@ class Chat(models.Model):
    message = models.TextField(max_length=250)
    response = models.TextField(max_length=250)
    rating = models.CharField(max_length=5, null=True)
+   intent = models.CharField(max_length=50, null=True)
     
 
 #Extend filefield attribute to upload to S3
-
 class S3FileField(models.FileField):
     def generate_filename(self, instance, filename):
         #Use customer name to create filename
@@ -144,4 +145,4 @@ class AppCredentials(models.Model):
     google_secret = S3FileField(upload_to='upload_to', null=True, unique=True)
     platform = models.CharField(max_length=250, null=True)
     
- 
+
