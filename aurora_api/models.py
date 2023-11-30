@@ -105,7 +105,7 @@ class S3FileField(models.FileField):
     def generate_filename(self, instance, filename):
         #Use customer name to create filename
         if filename:
-            ext = os.path.splitext(filename)[1]
+            ext = os.path.splitext(filename)[1] if os.path.splitext(filename)[1] else None
             attributes = model_to_dict(instance)
             if 'customer_name' in attributes:
                 filename = f"{instance.customer_name}{ext}"
@@ -113,8 +113,8 @@ class S3FileField(models.FileField):
                 filename = f"{instance.platform}{ext}"
             print(filename)
             return filename
-        else:
-            return 'southend council.pth'
+        #else:
+            #return 'southend council.pth'
 
     def upload_to(self, instance, filename):
         x = f"{os.environ['AWS_STORAGE_BUCKET_NAME']}/{self.generate_filename(instance, filename)}"

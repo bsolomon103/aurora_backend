@@ -18,7 +18,7 @@ def cache_chat_message(session_key, message, response, rating, intent):
     
     #Serialize the data
     serialized_data = json.dumps(chat_message)
-    print(serialized_data)
+ 
     session_key = session_key.encode('utf-8')
     r.lpush(f'chat_messages:{session_key}', serialized_data)
     if not r.sismember('session_keys_set', session_key):

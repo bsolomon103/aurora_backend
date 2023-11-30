@@ -16,7 +16,7 @@ from .models import Models, Customer, AppCredentials, Chat
 from .prediction_model import NeuralNet
 from .nltk_utils import bag_of_words, tokenize
 from .task_utils import PerformTask, FreeSlotChecker, get_free_dates
-from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_callback, download_file_from_s3
+from .responsemanager import get_response_dates, get_response_booking, get_response_aurora, start_assessment, get_response_feedback, download_file_from_s3
 
 
 class ModelIngredients:
@@ -38,7 +38,6 @@ class ModelIngredients:
         FILE = obj.training_file
         treatment_init = customer.treatment_init
         email = customer.email
-        #print(FILE)
         intents = obj.intent
         return FILE, customer_name, customer_id, intents, secret, calendar_id, booking_questions, mappings, closing, treatment_init, email
       
@@ -46,6 +45,7 @@ class ModelIngredients:
     def extract_data(self):
         file, customer_name, customer_id, intents, secret, calendar_id, booking_questions, mappings, closing, treatment_init, email = self.pull_files()
         self.dc['file'] = str(file)
+        #self.dc['vector_file'] = str(file)
         self.dc['intents'] = intents
         self.dc['secret'] = str(secret)
         self.dc['calendar_id'] = calendar_id
@@ -56,7 +56,6 @@ class ModelIngredients:
         self.dc['closing'] = closing
         self.dc['treatment_init'] = treatment_init
         self.dc['email'] = email
-        #print(booking_questions['booking questions'].keys())
         return self.dc
        
     def __set_item__(self, key, value):
@@ -68,7 +67,7 @@ class ModelIngredients:
 def get_response(msg, model, all_words, tags, session, device):
     response =""
     
-    if session['probe'] and msg.lower() == 'yes':
+    if (session['probe'] and msg.lower() == 'like') or msg.lower().split(':')[0].__contains__('redirect to'):
         response = random.choices(['Glad to be of service to you','Let me know if you have any more questions',
                                     "I'm delighted to assist you.","Feel free to reach out if you need further help.",
                                     "It's my pleasure to be of help.","Don't hesitate to ask if you require additional information.",
@@ -76,12 +75,19 @@ def get_response(msg, model, all_words, tags, session, device):
                                     ])[0]
                                     
         #Store the chat message in Redis
-        cache_chat_message(session['session_key'], msg, response,session['rating'],session['intent'])
+        cache_chat_message(session['session_key'], msg, response ,'like',session['intent'])
+        
         session.save()
-        return response
-    elif (session['probe'] and msg.lower() == 'no') or session['callback']:
-        response = get_response_callback(msg, session)
-        #cache_chat_message(session['session_key'], msg, response)
+        return {'response': {'text': response, 'probe': 'False'}}
+
+    elif (session['probe'] and msg.lower() == 'dislike') or session['feedback']:
+        if session['get_team']:
+            response = get_response_aurora(msg, model, all_words, tags, session, device)
+        else:
+            response = get_response_feedback(msg, session)
+        session['rating'] = 'dislike'
+        session.save()
+        cache_chat_message(session['session_key'], msg, response,'dislike', session['intent'])
         return response
         
     elif (not session['probe'] and msg.lower() == 'yes'):
@@ -90,21 +96,27 @@ def get_response(msg, model, all_words, tags, session, device):
         response = get_response_booking(msg, session)
         #cache_chat_message(session['session_key'], msg, session['rating'],response)
     else:
-        output = get_response_aurora(msg,model, all_words, tags, session, device)
-        response = output['response']
+        '''
+        data = get_response_aurora(msg, model, all_words, tags, session, device)
+        print(data)
+        return data
+        '''
+        for chunk in get_response_aurora(msg,model, all_words, tags, session, device):
+            yield chunk
+    
+        #response = output['response']
         #cache_chat_message(session['session_key'], msg, response)
-    if type(response) is list:
-        placeholder = 'list of dates'
-        cache_chat_message(session['session_key'],msg, session['rating'], placeholder, session['intent'])
-    session.save() 
-    return response
+   # if type(response) is list:
+    #    placeholder = 'list of dates'
+     #   cache_chat_message(session['session_key'],msg, session['rating'], placeholder, session['intent'])
+    #session.save() 
+    #return output
     
     
 def model_builder(trainingfile):
     dc = {}
-
-    # Specify the local file path where you expect the training file to be
     local_trainingfile = os.path.join(settings.BASE_DIR, 'media', 'training_file', os.path.basename(trainingfile))
+    #vectorfile = os.path.join(settings.BASE_DIR, 'media', 'training_file', os.path.basename(trainingfile))
 
     # Check if the local file exists
     if os.path.exists(local_trainingfile):
@@ -115,6 +127,7 @@ def model_builder(trainingfile):
         dc['tags'] = data['tags']
         dc['all_words'] = data['all_words']
         dc['model'] = model
+ 
     else:
         # The local file doesn't exist, download it from S3
         local_trainingfile = download_file_from_s3('training_file', trainingfile)
@@ -126,5 +139,19 @@ def model_builder(trainingfile):
             dc['tags'] = data['tags']
             dc['all_words'] = data['all_words']
             dc['model'] = model
+ 
 
     return dc
+    
+    
+def vector_builder(vectorfolder):
+    local_folder = os.path.join(settings.BASE_DIR, 'media', 'training_file', os.path.basename(vectorfolder))
+    
+    if os.path.exists(local_folder):
+        pass
+    else:
+        local_folder = download_file_from_s3('training_file', vectorfolder)
+        
+    return None
+    
+

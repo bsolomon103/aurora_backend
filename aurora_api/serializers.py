@@ -5,8 +5,8 @@ class MsgSerializer(serializers.Serializer):
     msg = serializers.CharField()
     session_key = serializers.CharField(allow_blank=True, required=False)
     image_upload = serializers.ImageField(required=False)
-    #image_model = serializers.PrimaryKeyRelatedField(queryset=Image.objects.all(), required=False)
-    
+    origin = serializers.CharField(allow_blank=True, required=False)
+
 class ImageSerializer(serializers.Serializer):
     image_upload = serializers.ImageField(required=True)
     

@@ -1,5 +1,5 @@
 from .task_utils import get_free_dates, extract_numbers, create_event, timenow
-from .openaiworkers import worker_one, worker_two
+from .openaiworkers import worker_one, worker_two, worker_three
 from .prediction_model import NeuralNet
 from .nltk_utils import bag_of_words, tokenize
 from .celeryfuncs import cache_chat_message
@@ -14,6 +14,8 @@ from .booking import call_back_email, send_email
 from .models import Treatments, Customer, Booking
 from .emailcheck import is_valid_treatment
 from .questions import questionsdc
+from .chain import build_chain
+from .langmodels import chain
 
 def download_file_from_s3(local_directory, file_reference):
     s3 = boto3.client('s3')
@@ -25,6 +27,21 @@ def download_file_from_s3(local_directory, file_reference):
     try:
         s3.download_file(bucket_name, file_reference, file_path)
         return file_path
+    except Exception as e:
+        # Handle exceptions (e.g., file not found in S3, permissions issues, etc.)
+        print(f"Error: {e}")
+        return None
+
+def download_folder_from_s3(local_directory, folder_reference):
+    s3 = boto3.client('s3')
+    bucket_name = os.environ['AWS_STORAGE_BUCKET_NAME']
+    directory = os.path.join(settings.BASE_DIR, 'media')  # Local file path where you want to save the downloaded file
+    folder_path = os.path.join(directory, local_directory, folder_reference)
+    print(folder_path)
+    
+    try:
+        s3.download_file(bucket_name, folder_reference, folder_path)
+        return folder_path
     except Exception as e:
         # Handle exceptions (e.g., file not found in S3, permissions issues, etc.)
         print(f"Error: {e}")
@@ -49,7 +66,7 @@ def start_assessment(msg, session):
     session.save()
     
 def get_response_dates(msg, session):
-    print('')
+    print('Getting Dates')
     treatment_required = session['booking_category']
     practise_name = session['customer_name']
     practise_obj = Customer.objects.get(name=practise_name)
@@ -57,7 +74,6 @@ def get_response_dates(msg, session):
     booking_duration = treatment_obj.booking_duration 
     calendar_id = treatment_obj.calendar_id
     secret = get_or_download_secret('Google.json')
-    print(secret)
     dates = get_free_dates(secret, calendar_id, booking_duration)
     response = dates
     session.save()
@@ -67,10 +83,8 @@ def get_response_booking(msg, session):
     con_summ = ''
     if 'questions' not in session:
         category = worker_two(session, session['mappings'])
-        #print(category)
         session['booking_category'] = category
         session['summary']['treatment category'] = category
-        #questions = session['booking_questions']['booking questions'][category][0] # this is where the change can be made !!!
         questions = questionsdc['booking questions'][category][0]
         session['questions'] = questions
         session['question_keys'] += list(questions.keys())
@@ -136,34 +150,70 @@ def get_response_aurora(msg, model, all_words, tags, session, device):
     probs = torch.softmax(output,dim=1)
     prob = probs[0][predicted.item()]
     dc = {}
-    dc['input_tag'] = tag
     session['intent'] = tag
     print(tag, prob.item())
-    if prob.item() >= 0.9:
+    if session['get_team']:
+        tag = worker_three(session)
+        session['intent'] = tag
         for intent in intents['intents']: 
             if tag == intent['tag']:
                 response =  random.choices(intent['responses'])[0]
                 session['messages'].append({'role':'assistant','content': response})
-                response = response if tag in no_probe else f"{response} <br/><br/><div style='display:flex; justify-content:center;'>Have I been helpful? (Y/N)</div>"
+    
+    else:
+        '''
+        data = chain(session, msg)
+        return data
+        '''
+        for chunk in build_chain(session, msg):
+            yield chunk
+    
+        #print(response)
+        #print('wtf2')
+        
+        
+    '''          
+    elif prob.item() >= 0.995:
+        for intent in intents['intents']: 
+            if tag == intent['tag']:
+                response =  random.choices(intent['responses'])[0]
+                session['messages'].append({'role':'assistant','content': response})
+                response = response
 
-    elif prob.item() < 0.9:
-        #response = worker_one(session)
-        response = get_response_callback(msg, session)
-    session['probe'] = False if tag in no_probe else True
-    #print(session['probe'])
-    dc['response'] = response
-    session.save()
-    cache_chat_message(session['session_key'], msg, response, None, session['intent'])
-    return dc
+    elif prob.item() < 0.995:
+        Second pass to OpenAI to see if a match can be found
+        tag = worker_two(session)
+        session['intent'] = tag
+        for intent in intents['intents']: 
+            if tag == intent['tag']:
+                response =  random.choices(intent['responses'])[0]
+                session['messages'].append({'role':'assistant','content': response})
+                response = response
+    '''
+    #session['probe'] = True
+    #print('wtf3')
+    #dc['response'] = response
+   # print('wtf4')
+    '''
+    try:
+        session.save()
+    except:
+        print('fail')
+    '''
+    #cache_chat_message(session['session_key'], msg, response, None, session['intent'])
+
+    #return dc
   
         
 
-def get_response_callback(msg, session):
-    session['callback'] = True
+def get_response_feedback(msg, session):
+    session['feedback'] = True
+    '''
     session['rating'] = 'No'
     key = ['input', 'output', 'rating']
     value = ['Im sorry I cant answer your query with a high degree of confidence yet, i am constanly learning and improving. Your feedback will help me learn faster.<br/><br/> Firstly, what was the nature of your request?',
             'How was my response inadequate?', 'Rate your experience out of 5, with 1 - poor and 5 - good']
+    
     
     count = session['count']
     if count < len(value):
@@ -174,6 +224,11 @@ def get_response_callback(msg, session):
         session['callback'] = False
         response = 'Thanks for your valuable feedback. This information will be used to make me better.'
         cache_chat_message(session['session_key'], msg, response,session['rating'],session['intent'])
+    response = {"response": {'text': response, "buttons" : None, 'probe': True}}
     session['count'] = count
+    '''
+    
+    response = 'So I can direct you to the right team, could you tell me what the topic of your question is?'
+    session['get_team'] = True
     session.save()
-    return response
+    return {'response': {'text': response, 'probe': 'False'}}

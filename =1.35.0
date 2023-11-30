@@ -1,0 +1,70 @@
+Collecting google-cloud-aiplatform
+  Downloading google_cloud_aiplatform-1.36.4-py2.py3-none-any.whl.metadata (27 kB)
+Requirement already satisfied: google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (2.11.0)
+Collecting proto-plus<2.0.0dev,>=1.22.0 (from google-cloud-aiplatform)
+  Downloading proto_plus-1.22.3-py3-none-any.whl.metadata (2.2 kB)
+Requirement already satisfied: protobuf!=3.20.0,!=3.20.1,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<5.0.0dev,>=3.19.5 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-cloud-aiplatform) (4.22.3)
+Requirement already satisfied: packaging>=14.3 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-cloud-aiplatform) (23.2)
+Collecting google-cloud-storage<3.0.0dev,>=1.32.0 (from google-cloud-aiplatform)
+  Downloading google_cloud_storage-2.13.0-py2.py3-none-any.whl.metadata (6.1 kB)
+Collecting google-cloud-bigquery<4.0.0dev,>=1.15.0 (from google-cloud-aiplatform)
+  Downloading google_cloud_bigquery-3.13.0-py2.py3-none-any.whl.metadata (8.5 kB)
+Collecting google-cloud-resource-manager<3.0.0dev,>=1.3.3 (from google-cloud-aiplatform)
+  Downloading google_cloud_resource_manager-1.10.4-py2.py3-none-any.whl.metadata (5.2 kB)
+Collecting shapely<3.0.0dev (from google-cloud-aiplatform)
+  Downloading shapely-2.0.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (7.0 kB)
+Requirement already satisfied: googleapis-common-protos<2.0dev,>=1.56.2 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (1.59.0)
+Requirement already satisfied: google-auth<3.0dev,>=2.14.1 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (2.17.3)
+Requirement already satisfied: requests<3.0.0dev,>=2.18.0 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (2.28.2)
+Collecting grpcio<2.0dev,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform)
+  Downloading grpcio-1.59.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.0 kB)
+Collecting grpcio-status<2.0dev,>=1.33.2 (from google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform)
+  Downloading grpcio_status-1.59.3-py3-none-any.whl.metadata (1.3 kB)
+Collecting google-cloud-core<3.0.0dev,>=1.6.0 (from google-cloud-bigquery<4.0.0dev,>=1.15.0->google-cloud-aiplatform)
+  Downloading google_cloud_core-2.3.3-py2.py3-none-any.whl.metadata (2.5 kB)
+Collecting google-resumable-media<3.0dev,>=0.6.0 (from google-cloud-bigquery<4.0.0dev,>=1.15.0->google-cloud-aiplatform)
+  Downloading google_resumable_media-2.6.0-py2.py3-none-any.whl.metadata (2.1 kB)
+Requirement already satisfied: python-dateutil<3.0dev,>=2.7.2 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-cloud-bigquery<4.0.0dev,>=1.15.0->google-cloud-aiplatform) (2.8.2)
+Collecting grpc-google-iam-v1<1.0.0dev,>=0.12.4 (from google-cloud-resource-manager<3.0.0dev,>=1.3.3->google-cloud-aiplatform)
+  Downloading grpc_google_iam_v1-0.12.7-py2.py3-none-any.whl.metadata (3.3 kB)
+Collecting google-auth<3.0dev,>=2.14.1 (from google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform)
+  Downloading google_auth-2.23.4-py2.py3-none-any.whl.metadata (4.7 kB)
+Collecting google-crc32c<2.0dev,>=1.0 (from google-cloud-storage<3.0.0dev,>=1.32.0->google-cloud-aiplatform)
+  Downloading google_crc32c-1.5.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (32 kB)
+Requirement already satisfied: numpy>=1.14 in /home/ec2-user/.env10/lib/python3.10/site-packages (from shapely<3.0.0dev->google-cloud-aiplatform) (1.24.2)
+Requirement already satisfied: cachetools<6.0,>=2.0.0 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-auth<3.0dev,>=2.14.1->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (5.3.0)
+Requirement already satisfied: pyasn1-modules>=0.2.1 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-auth<3.0dev,>=2.14.1->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (0.3.0)
+Requirement already satisfied: rsa<5,>=3.1.4 in /home/ec2-user/.env10/lib/python3.10/site-packages (from google-auth<3.0dev,>=2.14.1->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (4.9)
+Requirement already satisfied: six>=1.5 in /home/ec2-user/.env10/lib/python3.10/site-packages (from python-dateutil<3.0dev,>=2.7.2->google-cloud-bigquery<4.0.0dev,>=1.15.0->google-cloud-aiplatform) (1.16.0)
+Requirement already satisfied: charset-normalizer<4,>=2 in /home/ec2-user/.env10/lib/python3.10/site-packages (from requests<3.0.0dev,>=2.18.0->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (3.1.0)
+Requirement already satisfied: idna<4,>=2.5 in /home/ec2-user/.env10/lib/python3.10/site-packages (from requests<3.0.0dev,>=2.18.0->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (3.4)
+Requirement already satisfied: urllib3<1.27,>=1.21.1 in /home/ec2-user/.env10/lib/python3.10/site-packages (from requests<3.0.0dev,>=2.18.0->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (1.26.14)
+Requirement already satisfied: certifi>=2017.4.17 in /home/ec2-user/.env10/lib/python3.10/site-packages (from requests<3.0.0dev,>=2.18.0->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (2022.12.7)
+Requirement already satisfied: pyasn1<0.6.0,>=0.4.6 in /home/ec2-user/.env10/lib/python3.10/site-packages (from pyasn1-modules>=0.2.1->google-auth<3.0dev,>=2.14.1->google-api-core!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-api-core[grpc]!=2.0.*,!=2.1.*,!=2.2.*,!=2.3.*,!=2.4.*,!=2.5.*,!=2.6.*,!=2.7.*,<3.0.0dev,>=1.32.0->google-cloud-aiplatform) (0.5.0)
+Downloading google_cloud_aiplatform-1.36.4-py2.py3-none-any.whl (3.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.3/3.3 MB 84.0 MB/s eta 0:00:00
+Downloading google_cloud_bigquery-3.13.0-py2.py3-none-any.whl (222 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 222.8/222.8 kB 32.7 MB/s eta 0:00:00
+Downloading google_cloud_resource_manager-1.10.4-py2.py3-none-any.whl (320 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 321.0/321.0 kB 42.4 MB/s eta 0:00:00
+Downloading google_cloud_storage-2.13.0-py2.py3-none-any.whl (121 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 121.1/121.1 kB 18.2 MB/s eta 0:00:00
+Downloading proto_plus-1.22.3-py3-none-any.whl (48 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 48.1/48.1 kB 6.0 MB/s eta 0:00:00
+Downloading shapely-2.0.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.5 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.5/2.5 MB 87.4 MB/s eta 0:00:00
+Downloading google_auth-2.23.4-py2.py3-none-any.whl (183 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 183.3/183.3 kB 25.4 MB/s eta 0:00:00
+Downloading google_cloud_core-2.3.3-py2.py3-none-any.whl (29 kB)
+Downloading google_resumable_media-2.6.0-py2.py3-none-any.whl (80 kB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 80.3/80.3 kB 10.1 MB/s eta 0:00:00
+Downloading grpc_google_iam_v1-0.12.7-py2.py3-none-any.whl (26 kB)
+Downloading grpcio-1.59.3-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.3/5.3 MB 87.4 MB/s eta 0:00:00
+Downloading grpcio_status-1.59.3-py3-none-any.whl (14 kB)
+Installing collected packages: shapely, proto-plus, grpcio, google-crc32c, grpcio-status, google-resumable-media, google-auth, grpc-google-iam-v1, google-cloud-core, google-cloud-storage, google-cloud-resource-manager, google-cloud-bigquery, google-cloud-aiplatform
+  Attempting uninstall: google-auth
+    Found existing installation: google-auth 2.17.3
+    Uninstalling google-auth-2.17.3:
+      Successfully uninstalled google-auth-2.17.3
+Successfully installed google-auth-2.23.4 google-cloud-aiplatform-1.36.4 google-cloud-bigquery-3.13.0 google-cloud-core-2.3.3 google-cloud-resource-manager-1.10.4 google-cloud-storage-2.13.0 google-crc32c-1.5.0 google-resumable-media-2.6.0 grpc-google-iam-v1-0.12.7 grpcio-1.59.3 grpcio-status-1.59.3 proto-plus-1.22.3 shapely-2.0.2

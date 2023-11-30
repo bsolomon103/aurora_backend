@@ -22,7 +22,6 @@ class SessionManager:
                 self._session[k] = seasoning[k]
                 
         self._session['input_tag'] = None  
-        #self._session['questionasked'] = None 
         self._session['booking_on'] = False
         self._session['answers'] = {}
         self._session['count'] = 0 
@@ -32,9 +31,12 @@ class SessionManager:
         self._session['consultation_summary'] = []
         self._session['question_asked'] = None
         self._session['question_keys'] = []
-        self._session['rating'] = 'Yes'
+        self._session['rating'] = 'like'
         self._session['probe'] = False
-        self._session['callback'] = False
+        self._session['feedback'] = False
+        self._session['origin'] = self.origin
+        self._session['get_team'] = False
+        self._session['cached'] = False
         self._session.save()
         return self._session
 

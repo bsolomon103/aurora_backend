@@ -8,12 +8,24 @@ class UserTasks(TaskSet):
     def post_api(self):
         payload = {}
         headers = {'content-type':'application/json'}
-        questions = ['hi', 
-                     "What are the steps to apply for sheltered housing?",
-                     "What is the meaning of CQC?",
-                     "What dementia services are available?",
-                     "What is a Locality Dementia Navigator ?"]
+        questions = ['hi',
+                    "How can I get an adult social care assessment?",
+                    "What aid do you provide to carers?",
+                    "I want to report a pothole",
+                    "I wish to pay a parking fine",
+                    "I want to pay my council tax.",
+                    "How do i access housing benefits ?",
+                    "I want to apply for planning permission.",
+                    "I want to register my food business.",
+                    "I want to apply for a hackney carriage vehicle license.",
+                    "What happens to my recycling ?",
+                    "I want to apply for a children's work permit.",
+                    "I want to register the birth of my baby."
+                    
+                    ]
         payload['msg'] = random.choice(questions)
+        payload['session_key'] = ''
+        payload['origin'] = 'https://262e5fa0c08646e6871bedd3d249507d.vfs.cloud9.eu-west-2.amazonaws.com'
         endpoint = '/'
         with self.client.post(endpoint, 
                               headers=headers,
@@ -24,7 +36,7 @@ class UserTasks(TaskSet):
          
     
 class BasicUser(HttpUser):
-    host = "http://127.0.0.1:8080/api/response"
+    host = "https://api.eazibots.com/api/response"
     wait_time = between(4,8)
     tasks = [UserTasks]
 

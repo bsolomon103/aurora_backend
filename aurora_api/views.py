@@ -1,5 +1,6 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
+
 from rest_framework import generics, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
@@ -16,6 +17,7 @@ from .nltk_utils import tokenize, bag_of_words
 from .serializers import MsgSerializer, GetClientSerializer, ImageSerializer
 from django.urls import reverse_lazy
 import os
+import atexit
 from django.conf import settings
 from rest_framework.views import APIView
 from asgiref.sync import sync_to_async
@@ -35,6 +37,26 @@ from django.core.signing import Signer
 import base64
 from cryptography.fernet import Fernet
 from .tasks import test_func
+
+
+from langchain.chains import RetrievalQAWithSourcesChain, ConversationalRetrievalChain 
+from langchain.prompts import PromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain.output_parsers import StructuredOutputParser, ResponseSchema
+from langchain.schema.output_parser import StrOutputParser
+from langchain.schema.runnable import RunnableMap
+from langchain.chains.question_answering import load_qa_chain
+from langchain.llms import OpenAI, VertexAI 
+from langchain.chat_models import ChatOpenAI
+import pickle
+from langchain.schema import retriever
+import os
+from django.conf import settings
+import faiss
+from langchain.vectorstores import FAISS
+from langchain.embeddings import OpenAIEmbeddings
+import time
+import re
+from rest_framework.response import Response
 
 class TestAPIView(GenericAPIView):
     def get(self, request):
@@ -77,7 +99,6 @@ class ModelTrainingView(View):
                         existing_model.training_file = FILE
                         existing_model.model_key = model_key
                         print('Model updated successfully !')
-                        #existing_model.delete()
                 else:
                     Models.objects.create(customer_name = customer_obj,
                                         intent = intents_json,
@@ -98,17 +119,17 @@ class ModelResponseAPI(APIView):
     '''Main API which user requests will hit and returns a response to their questions'''
     serializer_class = MsgSerializer
     encryption_key = Fernet.generate_key()
-
+    bag = ''
     def post(self, request, *args, **kwargs):
-    #print('here')
-        origin = request.META['HTTP_ORIGIN']
-        #origin  = 'https://262e5fa0c08646e6871bedd3d249507d.vfs.cloud9.eu-west-2.amazonaws.com'
         serializer = self.serializer_class(data=request.data) 
         
         if serializer.is_valid():
             msg  = serializer.data['msg'] if serializer.data['msg'] is not None else 'Progress Chat'
             key = serializer.data['session_key']
             image = serializer.validated_data.get('image_upload')
+            origin = serializer.data.get('origin', request.META.get('HTTP_ORIGIN', None))
+            print(origin,'here')
+    
 
         
         if key == '':
@@ -116,13 +137,20 @@ class ModelResponseAPI(APIView):
             
             key = session.session_key
             session['session_key'] = key
+            session.save()
             #Create custom session here
  
         else:
             #Pull from custom session here
             session = SessionStore(session_key=key)
+            session['session_key'] = key
+            session.save()
         
-        payload = model_builder(session['file'])  
+    
+
+        payload = model_builder(session['file'])
+        
+        '''
         try: 
             output = get_response(msg,
             payload['model'], 
@@ -132,14 +160,33 @@ class ModelResponseAPI(APIView):
             torch.device('cpu'))
         except Exception as e:
             print(e)
-            output = 'Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.'
-            
+            output = {"response":{"text":"Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.", "probe": False}}
+        
         data = {
                 'session_key': key,
                 'response': output
             }
+        print(data)
+    
         
-        response = Response(data, status=200)  
+        '''
+        def event_stream():
+            for chunk in get_response(msg,payload['model'],payload['all_words'],payload['tags'],session,torch.device('cpu')):
+                data = {"session_key": key, "response": chunk}
+                yield data
+        
+        
+        
+        response = StreamingHttpResponse(event_stream(), content_type='application/json', status=200)
+        response['X-Accel-Buffering'] = 'no'  # Disable buffering in nginx
+        response['Cache-Control'] = 'no-cache'  # Ensure clients don't cache the data
+
+        #time.sleep(1.5)
+        data = {
+            "session_key": key,
+            "response": response
+        }
+    
         return response
         
 
@@ -150,24 +197,10 @@ class ImageUploadAPI(APIView):
         customer = Customer.objects.get(origin=origin)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            #print(serializer)
             image_upload = serializer.validated_data.get('image_upload')
             session_key = serializer.data.get('session_key')
 
-            
-        
-            '''
-            if image:
 
-                image_instance = Image.objects.create(
-                                                    image_field=image,
-                                                    customer=customer,
-                                                    name = 
-                )
-                session['images'] = image_instance['image_file']
-                print(session['images'])
-            
-            '''
         return Response('Image Uploaded Successfully')
         
             
