@@ -1,4 +1,4 @@
-from .tools import tools
+#from .tools import tools
 import time
 from langchain.chat_models import ChatOpenAI
 from .prompts import aurora_prompt
@@ -31,8 +31,9 @@ from langchain.tools.render import format_tool_to_openai_function
 import requests
 from pydantic import BaseModel, Field
 import datetime
-from langchain.memory import ChatMessageHistory
-
+from langchain.memory.chat_message_histories import RedisChatMessageHistory
+import redis 
+from langchain.schema.runnable.history import RunnableWithMessageHistory
 
 
 class OpenMeteoInput(BaseModel):
@@ -92,86 +93,15 @@ def search_wikipedia(query: str) -> str:
 functions = [format_tool_to_openai_function(tool) for tool in [search_wikipedia, get_current_temparature]]
 tools = [search_wikipedia, get_current_temparature]
 
-history = ChatMessageHistory()
-
-history.add_user_message("hi!")
-
-history.add_ai_message("whats up?")
-
-
-
-class ConversationManager:
-    def __init__(self, return_messages=True, memory_key="chat_history"):
-        self.memory = {}
-        self.return_messages = return_messages
-        self.memory_key = memory_key
-
-    def clear(self, session_key):
-        # Clear the conversation history for the specified session key
-        if session_key in self.memory:
-            del self.memory[session_key]
-    
-    def start_conversation(self, session_key):
-    # Clear the conversation history for the specified session key
-        try:
-            self.memory.clear(session_key)
-        except Exception as e:
-            print(e)
-
-    def add_message_to_conversation(self, user_id, message):
-        # Load existing conversation history from memory
-        chat_history = self.memory.load_memory_variables(user_id)
-
-        # Append the new message to the conversation
-        key = datetime.datetime.now().isoformat()
-        chat_history[key] = message
-
-        # Save the updated conversation history back to memory
-        self.memory.save_context(user_id, chat_history)
-
-    def get_chat_history(self, user_id):
-        # Retrieve the entire chat history for a user from memory
-        chat_history = self.memory.memory_variables(user_id)
-        return chat_history
-
-# Example usage
-#conversation_memory = ConversationBufferMemory(return_messages=True, memory_key="chat_history")
-#conversation_manager = ConversationManager(conversation_memory)
-
-# Start a new conversation for a user
-#user_id = "123"
-#conversation_manager.start_conversation(user_id)
-
-# Add messages to the conversation
-#conversation_manager.add_message_to_conversation(user_id, "Hello!")
-#conversation_manager.add_message_to_conversation(user_id, "How can I help you?")
-
-# Get the entire chat history for the user
-#chat_history = conversation_manager.get_chat_history(user_id)
-#print(chat_history)
-
-
-
-class SaveChats:
-    def __init__(self, ChatMessageHistory):
-        self.chats = ChatMessageHistory()
-        
-    
-    def add_chat(self, msg, role):
-        pass
 
 
 
 def chain(session, msg):
-    model = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0, max_tokens=500).bind(functions=functions)
+    print('here')
+    model = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0, max_tokens=200).bind(functions=functions)
     prompt = aurora_prompt()
     output = OpenAIFunctionsAgentOutputParser()
-    history = ChatMessageHistory()
-    history.add_user_message("hi!")
-    history.add_ai_message("whats up?")
-
-    
-
+    chat_history = session['messages']
     start = time.time()
     store = FAISS.load_local(os.path.join(settings.BASE_DIR, 'media', 'training_file', os.path.basename(session['customer_name'])), OpenAIEmbeddings())
     retriever = store.as_retriever()
@@ -182,12 +112,35 @@ def chain(session, msg):
             input =  lambda x : x['input'],
             agent_scratchpad = lambda x : format_to_openai_functions(x["intermediate_steps"])
     )
+ 
     chain = mapp | prompt | model | output
-    agent_executor = AgentExecutor(agent=chain, tools=tools, verbose=False, memory=memory)
-    response = agent_executor.invoke({"input": msg})
-    conversation_manager.add_message_to_conversation(session['session_key'], {"role":"assistant","content": response['output']})
+    agent_executor = AgentExecutor.from_agent_and_tools(agent=chain, tools=tools, verbose=False)
+    response = agent_executor.invoke({"input": session["messages"]})
 
-    return response['output']
+    current_messages = session['messages']
+    current_messages = current_messages + f"assistant: {response['output']}\n"
+    session['messages'] = current_messages
+    session.save()
+    
+    if response['output'].__contains__('assistant:'):
+        response = response['output'].split(':')[1]
+    else:
+        response = response['output']
+  
+    x = postprocessor(response)
+    if x != None:
+        response = response.replace(f"[{x}]", '😁 ')    
+    cache_chat_message(session['session_key'], msg, response)
+    return response
+
+
+def postprocessor(text):
+    # Find everything within square brackets
+    matches = re.findall(r'\[([^]]+)\]', text)
+    return matches[0] if len(matches) > 0 else None
+
+
+
 
 
     

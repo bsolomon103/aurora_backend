@@ -11,7 +11,7 @@ from .prediction_model import NeuralNet
 from .models import Models, Customer, Image
 import random, string 
 import torch
-from .extract import ModelIngredients, get_response, model_builder
+from .extract import ModelIngredients, get_response, files_downloader
 from .sessionsmanager import SessionManager, SessionEncrypt
 from .nltk_utils import tokenize, bag_of_words
 from .serializers import MsgSerializer, GetClientSerializer, ImageSerializer
@@ -37,8 +37,6 @@ from django.core.signing import Signer
 import base64
 from cryptography.fernet import Fernet
 from .tasks import test_func
-
-
 from langchain.chains import RetrievalQAWithSourcesChain, ConversationalRetrievalChain 
 from langchain.prompts import PromptTemplate, ChatPromptTemplate, HumanMessagePromptTemplate
 from langchain.output_parsers import StructuredOutputParser, ResponseSchema
@@ -57,6 +55,7 @@ from langchain.embeddings import OpenAIEmbeddings
 import time
 import re
 from rest_framework.response import Response
+
 
 class TestAPIView(GenericAPIView):
     def get(self, request):
@@ -130,8 +129,6 @@ class ModelResponseAPI(APIView):
             origin = serializer.data.get('origin', request.META.get('HTTP_ORIGIN', None))
             print(origin,'here')
     
-
-        
         if key == '':
             session = SessionManager(origin).create_session()
             
@@ -146,48 +143,37 @@ class ModelResponseAPI(APIView):
             session['session_key'] = key
             session.save()
         
-    
-
-        payload = model_builder(session['file'])
+        files_downloader(session['customer_name'])
         
-        '''
+
         try: 
-            output = get_response(msg,
-            payload['model'], 
-            payload['all_words'], 
-            payload['tags'],
-            session,
-            torch.device('cpu'))
+            output = get_response(msg,session)
         except Exception as e:
-            print(e)
-            output = {"response":{"text":"Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later.", "probe": False}}
+            print('failed')
+            output = "Im sorry. I dont have the answer now. Try again later, Im constantly learning and might be able to answer your question later."
         
         data = {
                 'session_key': key,
                 'response': output
             }
-        print(data)
-    
-        
+       
         '''
         def event_stream():
             for chunk in get_response(msg,payload['model'],payload['all_words'],payload['tags'],session,torch.device('cpu')):
                 data = {"session_key": key, "response": chunk}
                 yield data
         
-        
-        
         response = StreamingHttpResponse(event_stream(), content_type='application/json', status=200)
         response['X-Accel-Buffering'] = 'no'  # Disable buffering in nginx
-        response['Cache-Control'] = 'no-cache'  # Ensure clients don't cache the data
+        response['Cache-Control'] = 'no-cache'  # Ensure clients don't cache the 
 
         #time.sleep(1.5)
         data = {
             "session_key": key,
             "response": response
         }
-    
-        return response
+        '''
+        return Response(data)
         
 
 class ImageUploadAPI(APIView):

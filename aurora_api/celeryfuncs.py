@@ -6,7 +6,7 @@ from aurora_api.models import Chat
 
 r = redis.from_url('redis://:Aurora24@172.31.40.69:6379/1')
 
-def cache_chat_message(session_key, message, response, rating, intent):
+def cache_chat_message(session_key, message, response, rating=None, intent=None):
     '''Push cached chats into Redis List'''
     #Create a dictionary to represent the chat message
     chat_message = {

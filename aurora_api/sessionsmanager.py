@@ -26,7 +26,7 @@ class SessionManager:
         self._session['answers'] = {}
         self._session['count'] = 0 
         self._session['callbackcount'] = 0
-        self._session['messages'] = []
+        self._session['messages'] = ''
         self._session['summary'] = {}
         self._session['consultation_summary'] = []
         self._session['question_asked'] = None
