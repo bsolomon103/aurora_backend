@@ -152,9 +152,10 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
+#SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Use database-backed sessions
 SESSION_COOKIE_NAME = 'sessionid'
-SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False #changed
+
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_AGE = 3600
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
@@ -167,6 +168,8 @@ CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'None'
 CSRF_TRUSTED_ORIGINS = ['https://eac946ea7313489f9f0055b8035f47bb.vfs.cloud9.eu-west-2.amazonaws.com',
                         'https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com',
+                        "https://ae8edc37338949c28deeecb8b96120db.vfs.cloud9.eu-west-2.amazonaws.com",
+                        "http://35.177.97.110",
                         'https://api.eazibots.com']
 
 
@@ -197,7 +200,8 @@ CORS_ALLOW_HEADERS = [
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:3000',
-    'https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com'
+    'https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com',
+    "https://ae8edc37338949c28deeecb8b96120db.vfs.cloud9.eu-west-2.amazonaws.com"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -205,7 +209,8 @@ CORS_ORIGIN_WHITELIST = [
     'http://127.0.0.1:3000',
     'http://localhost:3000',
     'https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com',
-    'http://18.133.120.81:8080'
+    'http://18.133.120.81:8080',
+    "https://ae8edc37338949c28deeecb8b96120db.vfs.cloud9.eu-west-2.amazonaws.com"
 ]
 
 
@@ -213,7 +218,7 @@ CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         #"LOCATION": "redis://@127.0.0.1:6379/1",
-        "LOCATION": "redis://:Aurora24@172.31.40.69:6379/1",
+        "LOCATION": "redis://:Aurora24@172.31.18.131:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
@@ -232,7 +237,7 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 #AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
 
 #CELERY_SETTINGS
-CELERY_BROKER_URL = 'redis://:Aurora24@172.31.40.69:6379/1'
+CELERY_BROKER_URL = 'redis://:Aurora24@172.31.18.131:6379/1'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'

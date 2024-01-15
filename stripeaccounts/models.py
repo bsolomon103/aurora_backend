@@ -1,3 +1,4 @@
+'''
 from django.db import models
 from aurora_api.models import Customer
 
@@ -8,3 +9,4 @@ class StripeInfo(models.Model):
       phone = models.CharField(max_length=13)
       verified = models.BooleanField(default=False)
       account_id = models.CharField(max_length=250, null=True)
+'''

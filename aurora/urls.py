@@ -20,7 +20,7 @@ from django.urls import path, include
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('aurora_api.urls', namespace='apis')),
-    path('stripeaccounts/', include('stripeaccounts.urls', namespace='stripe'))
+    #path('stripeaccounts/', include('stripeaccounts.urls', namespace='stripe'))
 
 
 ]

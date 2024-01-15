@@ -13,9 +13,20 @@ def test_func(self):
 
 @shared_task(bind=True)
 def batch_write_to_db(self):
-    session_keys = r.smembers('session_keys_set')
-    if len(session_keys) > 0:
-        for session_key in session_keys:
-            save_data_to_db(session_key)
-        r.srem('session_keys_set', *list(session_keys))
-    
+    try:
+        # Retrieve session keys from Redis set
+        session_keys_set_name = 'session_keys_set'
+        while True:
+            # Pop one session key from the set
+            session_key = r.spop(session_keys_set_name)
+            if session_key is None:
+                break  # Set is empty
+            try:
+                # Save data to the database for each session key
+                save_data_to_db(session_key)
+                print(f"Processed session_key: {session_key}")
+            except Exception as e:
+                print(f"Error processing session_key {session_key}: {e}")
+    except Exception as e:
+        print(f"Error retrieving or processing session keys: {e}")
+

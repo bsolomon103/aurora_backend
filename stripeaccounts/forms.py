@@ -1,3 +1,4 @@
+'''
 from django import forms
 
 class StripeForm(forms.Form):
@@ -5,3 +6,4 @@ class StripeForm(forms.Form):
     mcc =  forms.CharField(widget=forms.TextInput(attrs={'size':25,'placeholder':'Merchant Category Code','style': 'max-width: 300px;', 'class':'form-control'}))
     name = forms.CharField(widget=forms.TextInput(attrs={'size':25,'placeholder':'Business Name','style': 'max-width: 300px;', 'class':'form-control'}))
     phone = forms.CharField(widget=forms.TextInput(attrs={'size':25,'placeholder':'Support Phone','style': 'max-width: 300px;', 'class':'form-control'}))
+'''

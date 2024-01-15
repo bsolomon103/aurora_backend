@@ -4,7 +4,7 @@ import redis
 
 from aurora_api.models import Chat
 
-r = redis.from_url('redis://:Aurora24@172.31.40.69:6379/1')
+r = redis.from_url('redis://:Aurora24@172.31.18.131:6379/1')
 
 def cache_chat_message(session_key, message, response, rating=None, intent=None):
     '''Push cached chats into Redis List'''
@@ -35,31 +35,24 @@ def save_data_to_db(session_key, batch_size=100):
     
     #Process and save data in batches
     batch = chat_messages
+    #print(batch)
     batch_data = [json.loads(data) for data in batch]
+    message = ' #BREAK#\n '.join([d['message'] for d in batch_data][::-1])
+    response = ' #BREAK#\n '.join([d['response'] for d in batch_data][::-1])
+    intent = len(batch_data)
+    #print(f"Batch {message},{response},{intent}")
+
     
+
+    
+
     print(f"Parsed {len(batch_data)} chat message data for session_key: {session_key}")
-
-    #Create Chat objects for the batch
-    chat_objects = [
-        Chat(session_id=session_key.decode('utf-8'), 
-            message=data.get('message',''), 
-            response=data.get('response',''),
-            rating=data.get('rating',''), 
-            intent=data.get('intent',''))
-            for data in batch_data
-        ]
     
-    print(f"Created {len(chat_objects)} Chat objects for session_key: {session_key}")
- 
-    Chat.objects.bulk_create(chat_objects)
-    print(f"Saved {len(chat_objects)} Chat objects to the database for session_key: {session_key}")
+    obj = Chat(session_id=session_key.decode('utf-8'), message=message, response=response, rating='', intent=len(batch_data))
+    obj.save()
+    
 
-        
-
-
-
-        
-
-
-        
-
+    print(f"Saved Chat objects to the database for session_key: {session_key}")
+    
+    # Delete data from Redis after successful database save
+    r.delete(f'chat_messages:{session_key}')

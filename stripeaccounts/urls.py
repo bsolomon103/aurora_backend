@@ -1,3 +1,4 @@
+'''
 from django.urls import path, include
 from .views import CreateView, CheckOutView, SuccessPage, PaymentCompleteAPI
 
@@ -8,3 +9,4 @@ urlpatterns = [
     path("success-page/", SuccessPage.as_view(), name='success-page'),
     path("stripe_webhooks/", PaymentCompleteAPI.as_view(), name='payment-complete'),
     ]
+'''

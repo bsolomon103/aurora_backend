@@ -1,20 +1,15 @@
 from django.shortcuts import render
 from django.http import HttpResponse, StreamingHttpResponse
-
 from rest_framework import generics, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
-from .forms import ModelTrainingForm
 from django.views import View
-from .prediction_train import ModelTrainingObject
-from .prediction_model import NeuralNet
-from .models import Models, Customer, Image
+from .models import Customer, Models, RateLimitSetting
 import random, string 
 import torch
 from .extract import ModelIngredients, get_response, files_downloader
 from .sessionsmanager import SessionManager, SessionEncrypt
-from .nltk_utils import tokenize, bag_of_words
-from .serializers import MsgSerializer, GetClientSerializer, ImageSerializer
+from .serializers import MsgSerializer, GetClientSerializer
 from django.urls import reverse_lazy
 import os
 import atexit
@@ -55,6 +50,10 @@ from langchain.embeddings import OpenAIEmbeddings
 import time
 import re
 from rest_framework.response import Response
+from django.core.cache import cache 
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
+
 
 
 class TestAPIView(GenericAPIView):
@@ -63,62 +62,32 @@ class TestAPIView(GenericAPIView):
         return HttpResponse('Done')
 
 
-class ModelTrainingView(View):
-    template = 'components/training.html'
-    success_url = 'reverse_lazy:fill_in_here'
-    def get(self, request, *args, **kwargs):
-        form = ModelTrainingForm()
-        ctx = {'form': form}
-        return render(request, self.template, context=ctx)
-    
-    def post(self, request, *args, **kwargs):
-        form = ModelTrainingForm(request.POST, request.FILES)
-        file = None
-        ctx = {'form': form, 'file': file}
-        
-        if form.is_valid():
-            intent = request.FILES['intent'].read()
-            customer_name = form.cleaned_data['customer_name']
-            epochs = form.cleaned_data['epochs']
-            batch_size = form.cleaned_data['batch_size']
-            learning_rate = form.cleaned_data['learning_rate']
-            hidden_size = form.cleaned_data['hidden_size']
-          
-            try:
-                customer_obj= Customer.objects.get(name__icontains=customer_name)
-                cust_id = customer_obj.id
-                intents_json, FILE = ModelTrainingObject(customer_name, intent, hidden_size, epochs, batch_size, learning_rate).train()
-                ctx = {'form':form, 'file': FILE}
-                model_key = str.lower(''.join(random.choice('0123456789ABCDEF') for i in range(32)))
-                existing_models = Models.objects.filter(customer_name = cust_id)
-                if len(existing_models) > 0:
-                    for i in range(len(existing_models)):
-                        existing_model = existing_models[i]
-                        existing_model.intent = intents_json
-                        existing_model.training_file = FILE
-                        existing_model.model_key = model_key
-                        print('Model updated successfully !')
-                else:
-                    Models.objects.create(customer_name = customer_obj,
-                                        intent = intents_json,
-                                        training_file = FILE,
-                                        model_key = model_key
-                                    )
-                    print('Model created successfully !')
-                return render(request, self.template, context=ctx)
-            except Exception as e:
-                print(e)
-                return render(request, self.template, context=ctx)
-        else:
-            print('Invalid Form')
-            return render(request, self.template, context=ctx)
-            
-     
 class ModelResponseAPI(APIView):
     '''Main API which user requests will hit and returns a response to their questions'''
     serializer_class = MsgSerializer
     encryption_key = Fernet.generate_key()
     bag = ''
+    
+    #RATE_LIMIT_KEY = 'Southend_Council' 
+    
+    @staticmethod
+    def get_rate_limit_setting():
+        #cache.clear()
+        rate_limit_setting = cache.get('rate_limit_setting')
+        
+        if rate_limit_setting is None:
+            try:
+                rate_limit_setting = RateLimitSetting.objects.get(key='Southend Council')
+            except RateLimitSetting.DoesNotExist:
+                rate_limit_setting = RateLimitSetting(limit=500, interval='day', key='Southend Council')
+                rate_limit_setting.save()
+            cache.set('rate_limit_setting', rate_limit_setting, timeout=3600)
+        print(f"Southend API Rate Limit: {rate_limit_setting.limit}/{rate_limit_setting.interval}")
+        return f"{rate_limit_setting.limit}/{rate_limit_setting.interval}"
+        
+        
+    
+    @(method_decorator(ratelimit(key='ip', rate=get_rate_limit_setting(), block=True))) 
     def post(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data) 
         
@@ -127,7 +96,8 @@ class ModelResponseAPI(APIView):
             key = serializer.data['session_key']
             image = serializer.validated_data.get('image_upload')
             origin = serializer.data.get('origin', request.META.get('HTTP_ORIGIN', None))
-            print(origin,'here')
+          
+
     
         if key == '':
             session = SessionManager(origin).create_session()
@@ -145,7 +115,6 @@ class ModelResponseAPI(APIView):
         
         files_downloader(session['customer_name'])
         
-
         try: 
             output = get_response(msg,session)
         except Exception as e:
@@ -156,37 +125,5 @@ class ModelResponseAPI(APIView):
                 'session_key': key,
                 'response': output
             }
-       
-        '''
-        def event_stream():
-            for chunk in get_response(msg,payload['model'],payload['all_words'],payload['tags'],session,torch.device('cpu')):
-                data = {"session_key": key, "response": chunk}
-                yield data
-        
-        response = StreamingHttpResponse(event_stream(), content_type='application/json', status=200)
-        response['X-Accel-Buffering'] = 'no'  # Disable buffering in nginx
-        response['Cache-Control'] = 'no-cache'  # Ensure clients don't cache the 
-
-        #time.sleep(1.5)
-        data = {
-            "session_key": key,
-            "response": response
-        }
-        '''
+     
         return Response(data)
-        
-
-class ImageUploadAPI(APIView):
-    serializer_class = ImageSerializer
-    def post(self, request, *args, **kwargs):
-        origin = request.META['HTTP_ORIGIN']
-        customer = Customer.objects.get(origin=origin)
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            image_upload = serializer.validated_data.get('image_upload')
-            session_key = serializer.data.get('session_key')
-
-
-        return Response('Image Uploaded Successfully')
-        
-            

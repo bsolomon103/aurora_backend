@@ -1,3 +1,4 @@
+'''
 from django.shortcuts import render, redirect
 from django.views import View
 from django.http import HttpResponse as Response, JsonResponse
@@ -263,3 +264,4 @@ class PaymentCompleteAPI(APIView):
         else:
           print('Unhandled event type {}'.format(event['type']))
         return Response({'success':True})
+'''

@@ -1,3 +1,4 @@
+'''
 import stripe
 stripe.api_key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
 
@@ -8,5 +9,6 @@ def check_verified(account_id):
         return True
     else:
         return False
+'''
     
     
