@@ -22,10 +22,11 @@ class SessionManager:
         self._session['messages'] = ''
         self._session['rating'] = 'like'
         self._session['probe'] = False
-        self._session['feedback'] = False
+        self._session['human_agent'] = False
         self._session['origin'] = self.origin
         self._session['agent_engaged'] = None
         self._session['request'] = {}
+        self._session['language'] = None
     
         self._session.save()
         return self._session

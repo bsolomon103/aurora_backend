@@ -14,7 +14,7 @@ from django.conf import settings
 from .models import Models, Customer, AppCredentials, Chat
 from .responsemanager import download_file_from_s3, download_s3_folder
 from .payload import agent_router
-
+from .language_translation import translate_to_eng
 
 class ModelIngredients:
     def __init__(self, origin):
@@ -58,7 +58,10 @@ class ModelIngredients:
 
 def get_response(msg, session):
     current_messages = session['messages']
-    current_messages = current_messages + f"user: {msg}\n"
+    #if session['language'] is None:
+       # session['language'], imsg = translate_to_eng(msg)
+    current_messages = current_messages + f"user: {msg}" 
+    #'if my message is not a salutation, check your context for an appropriate link to return in your response. Never make one up if one does not exist return the response without a link.'
     session['messages'] = current_messages
     session.save()
     return agent_router(session, msg)

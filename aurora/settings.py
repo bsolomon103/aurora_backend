@@ -48,7 +48,6 @@ INSTALLED_APPS = [
 
 
     'sslserver',
-    'corsheaders',
 
 
 ]
@@ -201,7 +200,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:3000',
     'http://localhost:3000',
     'https://258a482125664d88ad94800ecbefa0af.vfs.cloud9.eu-west-2.amazonaws.com',
-    "https://ae8edc37338949c28deeecb8b96120db.vfs.cloud9.eu-west-2.amazonaws.com"
+    "https://ae8edc37338949c28deeecb8b96120db.vfs.cloud9.eu-west-2.amazonaws.com",
+ 
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -247,4 +247,7 @@ CELERY_RESULT_BACKEND = 'django-db'
 
 #CELERY BEAT
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+X_FRAME_OPTIONS = 'ALLOW-FROM 262e5fa0c08646e6871bedd3d249507d.vfs.cloud9.eu-west-2.amazonaws.com'
+
 

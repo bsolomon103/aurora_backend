@@ -4,7 +4,7 @@ from rest_framework import generics, status
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 from django.views import View
-from .models import Customer, Models, RateLimitSetting
+from .models import Customer, Models, RateLimitSetting, HumanContact
 import random, string 
 import torch
 from .extract import ModelIngredients, get_response, files_downloader
@@ -53,13 +53,58 @@ from rest_framework.response import Response
 from django.core.cache import cache 
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
-
+from .forms import ContactForm
+from .emailfuncs import send_email
 
 
 class TestAPIView(GenericAPIView):
     def get(self, request):
         test_func.delay()
         return HttpResponse('Done')
+        
+        
+class ContactView(View):
+    template = 'components/contactform.html'
+    confirmation = 'components/confirmation.html'
+    def get(self, request, *args, **kwargs):
+        if not self.request.session.exists(self.request.session.session_key):
+            self.request.session.create()
+        form = ContactForm()
+        ctx = {'form':form}
+        return render(request, self.template, context=ctx)
+        
+    def post(self, request, *args, **kwargs):
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            dc = {}
+            first_name = form.cleaned_data['first_name']
+            last_name = form.cleaned_data['last_name']
+            service_type = form.cleaned_data['service_type']
+            requestt = form.cleaned_data['request']
+            phone = form.cleaned_data['phone_number']
+            email = form.cleaned_data['email']
+            print(first_name, last_name, service_type)
+            HumanContact.objects.create(service=service_type, request=requestt)
+            dc['first_name'] = first_name
+            dc['last_name'] = last_name
+            dc['service'] = service_type
+            dc['request'] = requestt
+            dc['phone'] = phone
+            dc['email'] = email
+            try:
+                send_email(dc)
+                print('Email Sent')
+                return render(request, self.confirmation, {'first_name': first_name, 'last_name': last_name, 'service_type': ' '.join(service_type.split('_')).title()})
+            except:
+                print ('Email Failed')
+                return render(request, self.template, context={'form': form})
+
+            
+  
+          
+        else:
+            print('invalid')
+        return render(request, self.template, context={'form': form})
 
 
 class ModelResponseAPI(APIView):
@@ -96,6 +141,7 @@ class ModelResponseAPI(APIView):
             key = serializer.data['session_key']
             image = serializer.validated_data.get('image_upload')
             origin = serializer.data.get('origin', request.META.get('HTTP_ORIGIN', None))
+            print(origin)
           
 
     

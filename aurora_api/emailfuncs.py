@@ -36,19 +36,17 @@ def send_to_practise(form, server):
     email_message = MIMEMultipart()
     email_message["From"] = 'solomon@eazibots.com'
     email_message["To"] = "biokporsolomon@yahoo.co.uk"
-    email_message['Subject'] = f"Request to change record. Candidate: {form['candidate_id']}"
+    email_message['Subject'] = f"Customer Enquiry from: {form['first_name']} {form['last_name']}"
     
     user_name = f"{form['first_name']} {form['last_name']}"
-    phone_number = form['phone_number']
+    phone_number = form['phone']
     email = form['email']
-    user_id = form['user_id']
     request = form['request']
-    #member_no = form['member_no']
-    #member_grade = form['member_grade']
+    service = form['service']
     
     
 
-    message = f"Hi,\n\nPlease see the details of this request made by {user_name} below.\nID: {user_id} below\nEmail: {email}\nPhone No: {phone_number}\nRequest: {request}."
+    message = f"Hi,\n\nPlease see the details of this request made by {user_name} below.\nEmail: {email}\nPhone No: {phone_number}\nTeam:{' '.join(service.split('_')).title()}\nRequest: {request}."
 
     #f"Hi,\n\nPlease see the details of this request made by candidate ID: {candidate_id} below\nEmail: {email}\nMember No: {member_no}\nMember Grade: {member_grade}\nRequest: {request}."
     # Add the message body

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class='row text-center'>
+    <div class='col align-self-center'>
+        <h5 class='mt-2 mb-3'>Southend Customer Service Contact Form</h5>
+    </div>
+</div>
+<div class='row text-center'>
+    <div class='col-lg-3 mx-auto text-center'>
+        <table>
+        <form class='form' enctype='multipart/form-data' action='' method='post'>
+            {% csrf_token %}
+            {{ form.first_name }}
+            {{ form.last_name }}
+            {{ form.phone_number }}
+            {{ form.email}}
+            {{ form.request }}
+            {{ form.service_type }}
+           
+            <button type='submit' class='btn btn-primary mt-2' style="background-color: #6ea4f5; border-color: black; color: white">Submit</button>
+            <button type='reset' class='btn btn-primary mt-2' style="background-color: white; border-color: black; color: black" >Reset</button>
+        </form>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

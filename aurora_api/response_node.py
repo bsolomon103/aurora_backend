@@ -3,7 +3,9 @@ from langchain.memory import ConversationBufferMemory
 from langchain.schema.runnable import RunnableMap,RunnablePassthrough
 from langchain.agents.format_scratchpad import format_to_openai_functions
 from langchain.tools.render import format_tool_to_openai_function
+#from langchain_core.utils.function_calling import convert_to_openai_function 
 from langchain.chat_models import ChatOpenAI
+#from langchain_community.chat_models import ChatOpenAI
 import os
 import time
 from langchain.embeddings import OpenAIEmbeddings
@@ -11,6 +13,8 @@ from django.conf import settings
 import faiss
 from langchain.vectorstores import FAISS
 import re
+from .apps import vector_store
+
 
 
 class ResponseNode:
@@ -21,9 +25,9 @@ class ResponseNode:
     tools(list): List of tools to bind as functions to model and/or AgentExecutor.
     output_parser: Output parser to structure and standardise the output
   """
-  def __init__(self, prompt,tools, output_parser):
+  def __init__(self, prompt,tools, output_parser, model):
     self.prompt = prompt
-    self.model = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0, max_tokens=1000)
+    self.model = ChatOpenAI(model_name=model, temperature=0, max_tokens=1000)
     self.tools = tools
     self.parser = output_parser
     self.functions = [format_tool_to_openai_function(t) for t in self.tools]
@@ -34,15 +38,19 @@ class ResponseNode:
     return chain.invoke({'input': obj})
 
   def retriever(self, session):
+    """
     start = time.time()
-    store = FAISS.load_local(os.path.join(settings.BASE_DIR, 'media', 'training_file', os.path.basename(session['customer_name'])), OpenAIEmbeddings())
+    store = FAISS.load_local(os.path.join(settings.BASE_DIR, 'media', 'training_file', os.path.basename(session['customer_name'])),OpenAIEmbeddings())
     end = time.time()
     print(f"Time taken to load db: {end - start}")
+    """
+    store = vector_store
     return store.as_retriever()
   
   def postprocessor(self, text):
     # Find everything within square brackets
     matches = re.findall(r'\[([^]]+)\]', text)
+    
     return matches[0] if len(matches) > 0 else None
       
       
@@ -104,6 +112,10 @@ class ResponseNode:
         session.save()
           
         response = response['output']
+        def url_check(text):
+          urls = re.findall(r'\b(?:https?|ftp):\/\/[\w-]+(\.[\w-]+)+([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?', text)
+          unique_urls = set(urls)
+          return len(urls) == len(unique_urls)
          
           
         if response.__contains__('assistant:'):
@@ -111,8 +123,12 @@ class ResponseNode:
             #response = ''.join(response)
               
         x = self.postprocessor(response)
-        if x != None:
+        
+        if x != None and url_check(response) == False:
             response = response.replace(f"[{x}]", '🖳') 
+        elif x != None and url_check(response):
+          response = response.replace('[', '').replace(']', '')
+        
   
         return response
     except Exception as e:

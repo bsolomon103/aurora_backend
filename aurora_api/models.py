@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 import os
+import pytz
 import boto3
 from django.contrib.sessions.models import Session
 from django.forms.models import model_to_dict
@@ -94,8 +95,22 @@ class Chat(models.Model):
    session_id = models.CharField(max_length=50)
    message = models.TextField(max_length=250)
    response = models.TextField(max_length=250)
-   rating = models.CharField(max_length=5, null=True)
+   chats = models.IntegerField(default=1, blank=False)
+   human_agent = models.BooleanField(default=False)
    intent = models.CharField(max_length=50, null=True)
+   reason = models.CharField(max_length=50, null=True)
+   created_at = models.DateTimeField(default=timezone.now)
+   
+   '''
+   def save(self, *args, **kwargs):
+        # Set the timezone to Europe/London
+        london_tz = timezone.pytz.timezone('Europe/London')
+        created_at = timezone.datetime.now(london_tz)
+        self.created_at = created_at
+        super().save(*args, **kwargs)
+    '''
+    
+   
     
 
 #Extend filefield attribute to upload to S3
@@ -141,4 +156,10 @@ class Models(models.Model):
 class AppCredentials(models.Model):
     google_secret = S3FileField(upload_to='upload_to', null=True, unique=True)
     platform = models.CharField(max_length=250, null=True)
+    
+
+class HumanContact(models.Model):
+    service = models.CharField(max_length=25, null=False)
+    request = models.TextField()
+    created_at = models.DateTimeField(default=timezone.now)
     

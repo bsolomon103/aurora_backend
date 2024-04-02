@@ -1,10 +1,10 @@
 from django.contrib import admin
-from .models import Models, Customer, AppCredentials, Chat, RateLimitSetting
+from .models import Models, Customer, AppCredentials, Chat, RateLimitSetting, HumanContact
 #Treatments, Price, TreatmentSeller, Booking, Chat
 
 
 class ChatAdmin(admin.ModelAdmin):
-    list_display = ['id', 'session_id', 'message', 'response', 'rating', 'intent']
+    list_display = ['id', 'session_id', 'message', 'response', 'chats','human_agent', 'intent', 'reason', 'created_at']
     
 class CustomerAdmin(admin.ModelAdmin):
     list_display = ['name']
@@ -14,6 +14,9 @@ class ModelAdmin(admin.ModelAdmin):
 
 class RateLimitAdmin(admin.ModelAdmin):
     list_display = ['key', 'limit', 'interval']
+    
+class HumanContactAdmin(admin.ModelAdmin):
+    list_display = ['service', 'request', 'created_at']
 
 '''
 class TreatmentAdmin(admin.ModelAdmin):
@@ -42,3 +45,4 @@ admin.site.register(RateLimitSetting, RateLimitAdmin)
 #admin.site.register(TreatmentSeller, TreatmentSellerAdmin)
 #admin.site.register(Booking, BookingAdmin)
 admin.site.register(Chat, ChatAdmin)
+admin.site.register(HumanContact, HumanContactAdmin)
